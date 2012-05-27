@@ -1,0 +1,1 @@
+from .avghue import AvgHue
