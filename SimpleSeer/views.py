@@ -17,6 +17,7 @@ from . import util
 from .realtime import RealtimeNamespace, ChannelManager
 from .service import SeerProxy2
 from .Session import Session
+from .Filter import Filter
 
 from .Filter import Filter
 
@@ -111,14 +112,91 @@ def frames():
         earliest_date = calendar.timegm(earliest_date.timetuple())
     return dict(frames=frames, total_frames=total_frames, earliest_date=earliest_date)
 
-
-@route('/features', methods=['GET'])
+	
+@route('/getFrames/<filter_params>', methods=['GET'])
 @util.jsonify
-def features():	
+def getFrames(filter_params):
+	from .base import jsondecode
+	from HTMLParser import HTMLParser
+	
+	# filter_params should be in the form of a json encoded dicts
+	# that probably was also html encoded 
+	p = HTMLParser()
+	nohtml = str(p.unescape(filter_params))
+	allparams = jsondecode(nohtml)
+	
+	limit = allparams['limit']
+	skip = allparams['skip']
+	
+	if 'sortinfo' in allparams:
+		sortinfo = allparams['sortinfo']
+	else:
+		sortinfo = {}
+		
+	query = allparams['query']
+	
 	f = Filter()
-	return f.getFilterOptions()
+	total_frames, frames = f.getFrames(query, limit=limit, skip=skip, sortinfo=sortinfo)
 	
+	retVal = dict(frames=frames, total_frames=total_frames)
 	
+	if retVal:
+		return retVal
+	else:
+		return {frames: None, 'error': 'no result found'}
+		
+		 
+@route('/downloadFrames/<result_format>/<filter_params>', methods=['GET'])
+def downloadFrames(result_format, filter_params):
+	from .base import jsondecode
+	from HTMLParser import HTMLParser
+	
+	# filter_params should be in the form of a json encoded dicts
+	# that probably was also html encoded 
+	p = HTMLParser()
+	nohtml = str(p.unescape(filter_params))
+	allparams = jsondecode(nohtml)
+	
+	limit = allparams['limit']
+	skip = allparams['skip']
+	
+	if 'sortinfo' in allparams:
+		sortinfo = allparams['sortinfo']
+	else:
+		sortinfo = {}
+	
+	query = allparams['query']
+	
+	f = Filter()
+	total_frames, frames = f.getFrames(query, limit=limit, skip=skip, sortinfo=sortinfo, dictOutput=True)
+	
+	if result_format == 'csv':
+		resp = make_response(f.toCSV(frames), 200)
+		resp.headers['Content-Type'] = 'text/csv'
+		resp.headers['Content-disposition'] = 'attachment; filename="frames.csv"'
+	elif result_format == 'excel':
+		resp = make_response(f.toExcel(frames), 200)
+		resp.headers['Content-Type'] = 'application/vnd.ms-excel'
+		resp.headers['Content-disposition'] = 'attachment; filename="frames.xls"'
+	else:
+		return 'Unknown format', 404
+	return resp
+	
+@route('/getFilter/<filter_type>/<filter_name>/<filter_format>', methods=['GET'])
+@util.jsonify
+def getFilter(filter_type, filter_name, filter_format):
+    
+    # formats: numeric, string, autofill, datetime
+    # types: measurement, frame, framefeature
+
+	f = Filter()
+	retVal = f.checkFilter(filter_type, filter_name, filter_format)
+	
+	if retVal:
+		return retVal
+	else:
+		return {'error': 'no result found'}
+    
 
 #TODO, abstract this for layers and thumbnails        
 @route('/grid/imgfile/<frame_id>', methods=['GET'])

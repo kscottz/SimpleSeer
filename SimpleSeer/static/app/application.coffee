@@ -43,8 +43,10 @@ Application =
     @frames = new Frames()
     @framesets = new FrameSets()
 
+    #@lastframes = new Frames()
+
     @homeView = new HomeView()
-    @framelistView = new FramelistView(@frames)
+    @framelistView = new FramelistView()
 
     # set up the client name
     $('#client-name').html Application.settings.ui_pagename || ""
@@ -64,6 +66,12 @@ Application =
 
   _serveralert: (msg) ->
     Application.alert(msg['data']['message'], msg['data']['severity'])
+
+  getFilter: (name) ->
+    if !@ui?
+      @ui = {}
+      @ui.filters = require 'views/filters/init'
+    return @ui.filters[name]
 
   alert: (message, alert_type) ->
     _anchor = @settings.ui_alert_anchor || '#messages'

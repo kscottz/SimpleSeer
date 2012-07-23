@@ -1,21 +1,101 @@
-<div class="row">
-  <form class="well span3" id="filter_form">
-    <h4>Filter frames</h4>
-    <label>Camera:</label>
-    <select name="camera"></select>
-    <label>From:</label>
-    <input type="text" name="time_from">
-    <label>To:</label>
-    <input type="text" name="time_to" placeholder="Now">
-    <input class="btn btn-primary" type="submit" value="Filter">
-    <input class="btn" type="reset" value="Reset">
-  </form>
-  <div class="span9 offset3">
-    <div id="frame_counts">
-      <p>Viewing <span id="count_viewing">{{count_viewing}}</span> of <span id="count_total">{{count_total}}</span> frames.</p>
-      <button id="load_new" class="btn btn-primary"><span id="count_new">{{count_new}}</span> new frames</button>
+  <div id="config">
+    <div id="icon-menu">
+      <div class="icon-item">
+      </div>
     </div>
-    <div id="frame_holder"></div>
+    <!--second tier menu panel -->
+    <div id="second-tier-menu">
+      <div class="second-tier-item">
+        <div id="second-tier-header">
+          <span class="title">Control Panel</span>
+          <img id="minimize-control-panel" src="img/arrows-minimize.png" />
+        </div>
+      </div>
+      <div id="filter_form"></div>
+        <div id="second-tier-footer">
+          <p style="clear:both;">Viewing <span id="count_viewing">{{count_viewing}}</span> of <span id="count_total">{{count_total}}</span> frames.</p>
+        </div>
+    </div>
+  </div>
+
+  <div id="stage">
+  
+       <!--MAIN TABS -->
+      <div id="views">
+        <div id="views-tabs">
+          <div id="image-tab">Image View</div>
+          <div id="data-tab" class="unselected">Data View</div>
+        </div>
+        <div id="views-contain">
+          <div id="views-controls">
+            <div id="control-images">
+              <img id="list-view" src="img/icon-list-view.png"><img id="grid-view" class="list-unselected" src="img/icon-grid-view.png">
+            </div>
+            <div id="control-copy">
+              <span>Order by:</span>
+              <select id="sortCombo">
+              {{#each sortComboVals}}
+                <option value="{{this.type}},{{this.name}},1" {{#if_eq "capturetime" compare=this.name}}selected="selected"{{/if_eq}}>{{this.label}} ascending</option>
+                <option value="{{this.type}},{{this.name}},-1">{{this.label}} descending</option>
+              {{/each}}
+              </select>
+            </div>
+          </div>
+          <div id="image-view">
+            <div id="frame_holder"></div>
+          </div><!--END GRID IMAGE VIEW -->
+          <!-- DATA VIEW -->                
+          
+
+
+            <!-- DATA VIEW -->
+            <div id="data-views-contain">
+              <div id="data-view">
+                <!--
+                <div id="data-views-controls">
+                  <div id="data-control-images">
+                    <img src="img/icon-calendar.png">
+                  </div>
+                  <div id="data-control-copy">
+                    <span class="data-date">List:
+
+                    <select class="style-select-listview">
+                      <option>Date Descending</option>
+                      <option></option>
+                      <option></option>
+                    </select>
+                    </span>
+                    <span class="selection-tog"><a href="#">Select All / </a><a href="#"><span class="copy-off">None</span></a></span> <span class="selection-tog"><a href="#">Edit</a> / <a href="#"><span class="copy-off">Edit All</span></a></span>
+
+                    <img id="icon-printer" src="img/icon-printer.png" />
+
+                  </div>
+                </div>-->
+                <div class="data-view-item">
+                  <table id="tabDataTable" class="tablesorter">
+                    <thead> 
+                      <tr> 
+                        <th>capturetime</th> 
+                        <th>head_width_mm</th> 
+                        <th>lbs_width_mm</th> 
+                        <th>shaft_width_mm</th> 
+                        <th>fillet_left_r</th> 
+                        <th>fillet_right_r</th> 
+                      </tr> 
+                    </thead>
+                    <tbody>
+                    </tbody>
+                  </table>
+                </div> <!-- END DATA VIEW ITEM -->
+            </div><!-- END DATA VIEW ITEM -->
+
+
+      </div>
+    
+    
+    
+    
+    
   </div>
 </div>
 <div id="loading_message" class="alert alert-info span11">

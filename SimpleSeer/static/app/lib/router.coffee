@@ -2,6 +2,7 @@ require 'lib/slide_replace'
 application = require 'application'
 Frame = require "../models/frame"
 FrameDetailView = require 'views/framedetail_view'
+FramelistView = require 'views/framelist_view'
 
 module.exports = class Router extends Backbone.Router
   routes: application.settings['ui_routes'] || {}
@@ -24,22 +25,23 @@ module.exports = class Router extends Backbone.Router
         application.homeView.postRender()
         
   framelist: ->
-    application.framelistView.reset()
-    application.frames.fetch_filtered
-      success: ->
-        $('ul.nav').find(".active").removeClass("active")
-        $('ul.nav').find('li.frames').addClass('active')
-        $('#main').slideReplace application.framelistView.render().el, 'right'
-        application.framelistView.postRender()
-        
-        
+    #application.framelistView.reset()
+    application.framelistView = new FramelistView()
+    #application.lastframes.fetch_filtered
+    #$('ul.nav').find(".active").removeClass("active")
+    #$('ul.nav').find('li.frames').addClass('active')
+    #$('#main').html application.framelistView.render().el
+    #$('#main').slideReplace application.framelistView.initialize()
+    #$('#main').html application.framelistView.render().el
+    $('#main').slideReplace application.framelistView.render().el, 'right'
+    
   frame: (id) ->
     frame_view = (f) ->
       fdv = new FrameDetailView({model: f})
       $('#main').slideReplace fdv.render().el, 'right'
       fdv.postRender()
        
-    f = application.frames.get(id)
+    #f = application.lastframes.get(id)
     if f
       frame_view f
     else

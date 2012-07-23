@@ -1,5 +1,5 @@
 mongoengine
-https://github.com/ingenuitas/pyfirmata/zipball/master
+#https://github.com/ingenuitas/pyfirmata/zipball/master
 decorator
 Flask
 Flask-REST
@@ -20,6 +20,7 @@ coffeescript
 https://github.com/ingenuitas/pyvpx/zipball/master
 scikit-learn
 MongoMultiMaster==0.0.4dev
+xlwt
 paste
 pastescript
 pastedeploy
