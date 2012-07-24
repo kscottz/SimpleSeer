@@ -51,6 +51,7 @@ class OLAPSchema(fes.Schema):
     #statsInfo = V.JSON(if_empty=dict, if_missing=None)
     #postProc = V.JSON(if_empty=dict, if_missing=None)
     notNull = fev.Int()
+    #linkedOLAP = V.JSON()
 
 class OLAP(SimpleDoc, mongoengine.Document):
 
@@ -68,6 +69,7 @@ class OLAP(SimpleDoc, mongoengine.Document):
     statsInfo = mongoengine.ListField()
     postProc = mongoengine.DictField()
     notNull = mongoengine.IntField()
+    linkedOLAP = mongoengine.ListField()
     
     meta = {
         'indexes': ['name']
@@ -97,11 +99,11 @@ class OLAP(SimpleDoc, mongoengine.Document):
         if 'movingCount' in self.postProc:
             if realtime:
                 full_res = self.doQuery()
-                results[self.postProc['movingCount']] = len(full_res) + 1
+                results['movingCount'] = len(full_res) + 1
                 
             else:
                 for counter, r in enumerate(results):
-                    r[self.postProc['movingCount']] = counter + 1
+                    r['movingCount'] = counter + 1
 
         return results
 

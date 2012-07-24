@@ -24,3 +24,7 @@ xlwt
 paste
 pastescript
 pastedeploy
+pandas
+statsmodels
+patsy
+

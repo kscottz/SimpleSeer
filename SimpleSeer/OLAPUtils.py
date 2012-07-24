@@ -113,55 +113,13 @@ class OLAPFactory:
         # Return the result
         # NOTE: This OLAP is not saved 
         return o
+        
+
     
-
-class OLAPFunctions():
-    
-    def timeSinceUQ(self, results, key):
-        from calendar import timegm
-        from operator import itemgetter
-        
-        sortedResults = sorted(results, key=itemgetter(key))
-        uqScore = sortedResults[int(.75 * len(sortedResults))][key]
-
-        lastTime = None
-        for r in results:
-            if r[key] >= uqScore:
-                lastTime = r['capturetime']
-                r[key] = 0
-            elif lastTime is not None:
-                r[key] = (r['capturetime'] - lastTime).total_seconds()
-                
-        return results
-                
-    def timeOfUQ(self, results, key):
-        from calendar import timegm
-        from operator import itemgetter
-        
-        sortedResults = sorted(results, key=itemgetter(key))
-        uqScore = sortedResults[int(.75 * len(sortedResults))]
-
-        startTime = None
-        duration = None
-        for r in results:
-            if r[key] >= uqScore:
-                if startTime == None:
-                    startTime = r['capturetime']
-                duration = (r['capturetime'] - startTime).total_seconds()
-            elif duration is not None:
-                startTime = None
-                r[key] = duration
-            
-        return results
-        
-
 class RealtimeOLAP():
     
     def realtime(self, res):
-
     
-        from .models.Chart import Chart
-        
         olaps = OLAP.objects(__raw__={'$or': [ {'queryType': 'measurement_id', 'queryId': res.measurement_id}, 
                                                {'queryType':'inspection_id', 'queryId': res.inspection_id}
                                              ]}) 
@@ -169,19 +127,23 @@ class RealtimeOLAP():
         for o in olaps:
             # If no statistics, just send result on its way
             if not o.statsInfo:
-                
-                data = self.resToData(o, res)
-                
-                
-                if len(data) > 0:
-                    # Long term fix: only publish to charts that are listened to
-                    cs = Chart.objects(olap = o.name)
-                    
-                    for c in cs:
-                        thisData = data.copy()
-                        chartData = c.mapData([thisData])
-                        self.sendMessage(o, chartData, c.name)
-    
+                data = self.resToData(o, res)                
+                self.sendOLAP(data, o)
+
+                 
+    def sendOLAP(self, data, o):
+        from .models.Chart import Chart
+        
+        if len(data) > 0:
+            # Need long term fix: only publish to charts that are listened to
+            cs = Chart.objects(olap = o.name)
+            
+            for c in cs:
+                thisData = data.copy()
+                chartData = c.mapData([thisData])
+                self.sendMessage(o, chartData, c.name)                     
+
+
     def resToData(self, o, res):
         
         # Have to enforce: filter
@@ -212,6 +174,7 @@ class RealtimeOLAP():
             results = o.doPostProc(results, True)
         
         return results
+
 
     def sendMessage(self, o, data, subname):
         if (len(data) > 0):
