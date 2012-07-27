@@ -9,7 +9,10 @@ from SimpleSeer import validators as V
 import formencode as fe
 
 from datetime import datetime, timedelta
+from SimpleSeer.Filter import Filter
 
+from SimpleSeer.models.Measurement import Measurement
+from SimpleSeer.models.Inspection import Inspection
 
 log = logging.getLogger(__name__)
 
@@ -30,9 +33,9 @@ log = logging.getLogger(__name__)
 # customFilter: dict of additional filter values.  e.g., {'string': 'yellow'}
 # groupTime: used for aggreagating result.  Possible values are: minute, hour, day
 # statsInfo: Select how to group and aggregate data.  List of dicts.  In each dict, the key is the name of the function and the val is the name of the field on which to apply the function
-#       Possible functions based on mongo aggregation framework, such as first, last, max, min, avg, sum
+#       Allowed functions based on mongo aggregation framework, such as first, last, max, min, avg, sum
 # postProc: Stats function that require global data set (don't work well with mongo)
-#       Possible functions: movingCount
+#       Allowed functions: movingCount
 #################################
 
   
@@ -79,12 +82,15 @@ class OLAP(SimpleDoc, mongoengine.Document):
     def __repr__(self):
         return "<OLAP %s>" % self.name
 
-    def execute(self):
+    def execute(self, filterParams = {}):
         
-        results = self.doQuery()
+        # Get the raw data
+        results = self.doQuery(filterParams)
         
-        if len(results) > self.maxLen:
-            results = self.autoAggregate(results)
+        #if len(results) > self.maxLen:
+        #    results = self.autoAggregate(results)
+        
+        
         
         results = self.doPostProc(results)
         
@@ -108,181 +114,21 @@ class OLAP(SimpleDoc, mongoengine.Document):
         return results
 
 
-    def doQuery(self):
-        db = self._get_db()
+    def doQuery(self, filterParams):
+        f = Filter()
         
-        match = self.createMatch()
-        project = self.createFields()
-        multival = self.createMultiVal()
-        stats = self.createStats()
+        queryParams = filterParams
+        if self.queryType == 'measurement_id':
+            m = Measurement.objects(id=self.queryId)[0]
+            queryParams = {'type': 'measurement', 'name': m.name}
+        elif self.queryType == 'inspection_id':
+            log.warn('Can not currently run olaps on inspections')
+            # TODO: Implement this
         
-        sort = {'capturetime': 1}
+        count, frames = f.getFrames([queryParams], unit='result')
+        return f.flattenFrame(frames)
   
-        pipeline = self.assemblePipeline(match, multival, project, stats, sort)
   
-        cmd = db.command('aggregate', 'result', pipeline=pipeline)
-        return cmd['result']
-
-
-    def assemblePipeline(self, match, multival, project, stats, sort):
-        
-        pipeline = []
-        
-        # Will always have search criteria
-        # But should eventually add handling to fail gracefully if not
-        pipeline.append({'$match': match})
-        
-        # Will also have fields selected
-        # But should eventually add handling to fail gracefully if not
-        pipeline.append({'$project': project})
-        
-        
-        # Check if grouping multiple results
-        if multival:
-            pipeline.append({'$sort': self.queryId})
-            pipeline.append({'$group': multival})
-        
-        
-        # Always sort results by capturetime (not sure if this will ever be conditional)
-        pipeline.append({'$sort': sort})
-        
-        # Handle stats, if they exist
-        if stats:
-            # First, the basic grouping/stats
-            pipeline.append({'$group': stats})
-            
-            # Stats groups on _id field, which is inconsistent with non-grouped format
-            # Use project to rename the _id field back to capturetime
-            statsProject = {}
-            
-            for key, val in stats.iteritems():
-                if key == '_id':
-                    statsProject['capturetime'] = '$_id'
-                    statsProject['_id'] = 0
-                else:
-                    statsProject[key] = 1
-            
-            pipeline.append({'$project': statsProject})
-            
-            # Operation messes up previous sorting, so re-sort
-            pipeline.append({'$sort': sort})
-        
-        
-        return pipeline
-
-
-    def createMatch(self):
-        
-        match = {}
-
-        # Filter to the relevant inspection/measurement
-        match[self.queryType] = self.queryId
-        
-        # Time filters, since and before
-        captureTime = {}
-        if self.since:
-            sinceTime = datetime.fromtimestamp(self.since)
-            captureTime['$gte'] = sinceTime
-        
-        if self.before:
-            beforeTime = datetime.fromtimestamp(self.before)
-            captureTime['$lt'] = beforeTime
-            
-        if len(captureTime) > 0:
-            match['capturetime'] = captureTime
-        
-        # Allow a custom filter field from the OLAP
-        # TODO: Allow more than one filter
-        if self.customFilter:
-            filt = self.customFilter
-            match[filt['field']] = filt['val']
-            
-        return match
-            
-    def createFields(self):
-        # Select/construct the fields necessary
-        fields = {}
-        
-        # First select the fields from Result to include
-        for p in self.fields:
-            fields[p] = 1
-            
-        
-        # Construct a custom time field if need to group by time        
-        if self.groupTime:
-            if self.groupTime == 'minute':
-                fields['t'] = { '$isoDate': { 'year': { '$year': '$capturetime' }, 
-                                    'month': { '$month': '$capturetime' }, 
-                                    'dayOfMonth': { '$dayOfMonth': '$capturetime' }, 
-                                    'hour': { '$hour': '$capturetime' },
-                                    'minute': { '$minute': '$capturetime'}}}
-            elif self.groupTime == 'hour':
-                fields['t'] = { '$isoDate': { 'year': { '$year': '$capturetime' }, 
-                                    'month': { '$month': '$capturetime' }, 
-                                    'dayOfMonth': { '$dayOfMonth': '$capturetime' }, 
-                                    'hour': { '$hour': '$capturetime' }}}
-            elif self.groupTime == 'day':
-                fields['t'] = { '$isoDate': { 'year': { '$year': '$capturetime' }, 
-                                    'month': { '$month': '$capturetime' }, 
-                                    'dayOfMonth': { '$dayOfMonth': '$capturetime' }}}
- 
-        if self.valueMap:
-            mapField = self.valueMap['field'] 
-            fields[mapField] = self.createMap(self.valueMap)
-    
-        return fields
-    
-    def createMultiVal(self):
-        
-        multiVals = {}
-        
-        multiVals['_id'] = '$field_id'
-        
-        for f in self.fields:
-            multiVals[f] = {'$push': '$f'}
-        
-        return None
-    
-    def createStats(self):
-        
-        stats = {}
-        
-        
-        if len(self.statsInfo) > 0:
-            stats['_id'] = '$t'
-            
-            for s in self.statsInfo:
-                key, val = s.items()[0]
-                # Needs special handling for count
-                if type(val) == int:
-                    stats['count'] = {'$' + str(key): '$' + str(val)}
-                else:
-                    stats[str(val)] = {'$' + str(key): '$' + str(val)}
-            
-            
-            return stats
-
-    def createMap(self, mapInfo):
-        
-        thisMap = mapInfo.copy()
-        
-        # Grab the name of the field
-        fieldName = '$' + thisMap.pop('field')
-        
-        # Grab the 'else' term
-        defaultVal = thisMap.pop('default')
-        
-        
-        return self.recurseMap(fieldName, defaultVal, thisMap)
-    
-    def recurseMap(self, fieldName, defaultVal, remainTerms):
-        
-        if len(remainTerms) > 0:
-            key, val = remainTerms.popitem()            
-            return {'$cond': [{'$eq': [fieldName, key]}, val, self.recurseMap(fieldName, defaultVal, remainTerms)]}
-        else:
-            return defaultVal
-
     def autoAggregate(self, resultSet, autoUpdate = True):
         oldest = resultSet[-1]
         newest = resultSet[0]
@@ -328,10 +174,6 @@ class OLAP(SimpleDoc, mongoengine.Document):
                 fakeResult[f] = ObjectId()
             elif f == 'capturetime':
                 fakeResult[f] = datetime.utcnow()
-            elif f == 'string':
-                fakeResult[f] = self.notNull
-            elif f == 'numeric':
-                fakeResult[f] = self.notNull
             else:
                 fakeResult[f] = 0
                 
@@ -341,3 +183,6 @@ class OLAP(SimpleDoc, mongoengine.Document):
         fake2['capturetime'] -= timedelta(0,2)       
                 
         return [fakeResult, fake2]
+
+
+    

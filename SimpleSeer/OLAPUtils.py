@@ -23,10 +23,10 @@ class OLAPFactory:
         # get a result to do some guessing on the data types
         if type(obj) == Measurement:
             queryType = 'measurement'
-            r = Result.objects(measurement = obj.id).limit(1)[0]
+            r = Result.objects(measurement_id = obj.id).limit(1)[0]
         elif type(obj) == Inspection:
             queryType = 'inspection'
-            r = Result.objects(measurement = obj.id).limit(1)[0]
+            r = Result.objects(inspection_id = obj.id).limit(1)[0]
         else:
             log.warn('OLAP factory got unknown type %s' % str(type(obj)))
         
