@@ -1,7 +1,8 @@
 from .models.OLAP import OLAP
 from .models.Measurement import Measurement
 from .models.Inspection import Inspection
-from .models.Result import Result
+
+from .Filter import Filter
 
 from gevent import Greenlet, sleep
 from datetime import datetime, timedelta
@@ -9,6 +10,10 @@ from time import mktime
 
 from .util import utf8convert
 from .realtime import ChannelManager
+
+
+
+import pandas as pd
 
 import logging
 log = logging.getLogger(__name__)
@@ -118,17 +123,30 @@ class OLAPFactory:
     
 class RealtimeOLAP():
     
-    def realtime(self, res):
-    
-        olaps = OLAP.objects(__raw__={'$or': [ {'queryType': 'measurement_id', 'queryId': res.measurement_id}, 
-                                               {'queryType':'inspection_id', 'queryId': res.inspection_id}
-                                             ]}) 
+    def realtime(self, frame):
         
-        for o in olaps:
-            # If no statistics, just send result on its way
-            if not o.statsInfo:
-                data = self.resToData(o, res)                
-                self.sendOLAP(data, o)
+        conds = []
+        for res in frame.results:
+            conds.append({'queryType': 'measurement_id', 'queryId': res.measurement_id})
+        for feat in frame.features:
+            conds.append({'queryType':'inspection_id', 'queryId': feat.inspection})
+        
+        f = Filter()
+        f2 = f.flattenFrame([frame])
+            
+        olaps = OLAP.objects(__raw__={'$or': conds}) 
+        
+        if olaps:
+            f = Filter()
+            frame = f.flattenFrame([frame])
+            for o in olaps:
+                # If no statistics, send result on its way
+                # If there are stats, it will be handled later by stats scheduler
+                if not o.statsInfo:
+                    oFrame = self.formatFrame(o, frame)
+                    dFrame = [v for v in oFrame.transpose().to_dict().values()][0]
+                    if len(dFrame):
+                        self.sendOLAP(dFrame, o)
 
                  
     def sendOLAP(self, data, o):
@@ -144,36 +162,17 @@ class RealtimeOLAP():
                 self.sendMessage(o, chartData, c.name)                     
 
 
-    def resToData(self, o, res):
+    def formatFrame(self, o, frame):
         
-        # Have to enforce: filter
-        results = {}
+        sinceok = (not o.since) or (frame.capturetime > o.since)
+        beforeok = (not o.before) or (frame.capturetime < o.before)
         
-        sinceok = (not o.since) or (res.capturetime > o.since)
-        beforeok = (not o.before) or (res.capturetime < o.before)
-        if not o.customFilter:
-            filterok = True
-        else:
-            key = o.customFilter['field']
-            val = o.customFilter['val']
-            if res[key] == val:
-                filterok = True
-            else:
-                filterok = False
-        
-        if sinceok and beforeok and filterok:
-            
+        if sinceok and beforeok:
             # Use only the specified fields
-            for f in o.fields:
-                results[f] = res.__getattribute__(f) 
-                
-                # Map the values, if applicable
-                if (o.valueMap) and (o.valueMap['field'] == f):
-                    results[f] = o.valueMap.get(results[f], o.valueMap['default']) 
+            frame = pd.DataFrame(frame)
+            frame = o.doPostProc(frame, True)
         
-            results = o.doPostProc(results, True)
-        
-        return results
+        return frame
 
 
     def sendMessage(self, o, data, subname):
@@ -181,7 +180,7 @@ class RealtimeOLAP():
             msgdata = dict(
                 olap = str(o.name),
                 data = data)
-            
+        
             olapName = 'Chart/%s/' % utf8convert(subname) 
             ChannelManager().publish(olapName, dict(u='data', m=msgdata))
             

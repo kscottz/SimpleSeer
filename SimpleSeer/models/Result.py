@@ -53,6 +53,7 @@ class Result(SimpleDoc, mongoengine.Document):
     }
 
     
+    """
     def capEpochMS(self):
         # Shortcut to return the capture time in epoch microseconds
         
@@ -60,12 +61,13 @@ class Result(SimpleDoc, mongoengine.Document):
         return epochTime
 
     capturetimeEpochMS = property(capEpochMS)
-
+    """
+    
     def save(self, *args, **kwargs):
         # Push notification to OLAP to decide whether to publish this update
-        from SimpleSeer.OLAPUtils import RealtimeOLAP
-        ro = RealtimeOLAP()
-        ro.realtime(self)
+        #from SimpleSeer.OLAPUtils import RealtimeOLAP
+        #ro = RealtimeOLAP()
+        #ro.realtime(self)
         
         super(Result, self).save(*args, **kwargs)
 

@@ -14,6 +14,8 @@ from SimpleSeer.Filter import Filter
 from SimpleSeer.models.Measurement import Measurement
 from SimpleSeer.models.Inspection import Inspection
 
+import pandas as pd
+
 log = logging.getLogger(__name__)
 
 
@@ -65,7 +67,7 @@ class OLAP(SimpleDoc, mongoengine.Document):
     queryIds = mongoengine.ListField()
     fields = mongoengine.ListField()
     groupTime = mongoengine.StringField()
-    valueMap = mongoengine.DictField()
+    valueMap = mongoengine.ListField()
     since = mongoengine.IntField()
     before = mongoengine.IntField()
     customFilter = mongoengine.DictField()
@@ -93,15 +95,30 @@ class OLAP(SimpleDoc, mongoengine.Document):
         
         
         results = self.doPostProc(results)
+        results = self.doStats(results)
         
-        if (results == []) and (type(self.notNull) == int):
+        if not len(results) and type(self.notNull) == int:
             results = self.defaultOLAP()
+        
+        return [v for v in results.transpose().to_dict().values()]
+        
+        
+    def doPostProc(self, results, realtime=False):
+        
+        for vmap in self.valueMap:
+            field = vmap['field']
+            default = vmap['default']
+            newvals = vmap['valueMap']
+            
+            results[field] = results[field].apply(lambda x: newvals.get(x, default))
+            results[field] = results[field].apply(lambda x: newvals.get(x, default))
         
         return results
 
+    def doStats(self, results, realtime=False):
+        return results
 
-    def doPostProc(self, results, realtime=False):
-        
+        # Re implement this stuff
         if 'movingCount' in self.postProc:
             if realtime:
                 full_res = self.doQuery()
@@ -110,8 +127,6 @@ class OLAP(SimpleDoc, mongoengine.Document):
             else:
                 for counter, r in enumerate(results):
                     r['movingCount'] = counter + 1
-
-        return results
 
 
     def doQuery(self, filterParams):
@@ -126,7 +141,10 @@ class OLAP(SimpleDoc, mongoengine.Document):
             # TODO: Implement this
         
         count, frames = f.getFrames([queryParams], unit='result')
-        return f.flattenFrame(frames)
+        flat = f.flattenFrame(frames)
+        
+        return pd.DataFrame(flat)
+
   
   
     def autoAggregate(self, resultSet, autoUpdate = True):
