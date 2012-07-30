@@ -17,10 +17,20 @@ module.exports = class FramelistFrameView extends View
     'click .action-viewFrame' : 'expandImage'
     'click .clickEdit'  : 'switchStaticMeta'
     'blur .clickEdit'  : 'switchInputMeta'
+    'click .notes-field' : 'setDirty'
     'change .notes-field' : 'updateNotes'
+    'click .savebtn' : 'setSaved'
 
   expandImage: =>
     application.framelistView.showImageExpanded @$el, @frame, @model
+    
+  setSaved: =>
+    @$el.find('.savebtn').button( "option" , 'label' , 'Saved' )
+    @$el.find('.savebtn').button('disable')
+    
+  setDirty: =>
+    @$el.find('.savebtn').button('enable')
+    @$el.find('.savebtn').button( "option" , 'label' , 'Save' )
 
   delBlankMeta: (obj) =>
     $(obj).find("tr").each (id, obj) ->
@@ -51,12 +61,15 @@ module.exports = class FramelistFrameView extends View
     
     #@addMetaBox(self)
     @model.save {metadata: metadata}
+    @setSaved()
 
   updateNotes: (e) =>
-    @model.save {notes:$(".notes-field").attr('value')}    
+    @model.save {notes:$(".notes-field").attr('value')}
+    @setSaved()
 
   switchStaticMeta: (e) =>
     self = $(e.currentTarget)
+    @setDirty()
 
     if self.find("input").length == 0
       $(self).html "<input type=\"text\" value=\"" + self.html() + "\">"
@@ -91,8 +104,10 @@ module.exports = class FramelistFrameView extends View
     retVal
 
   afterRender: =>    
-    @$el.find(".notes-field").autogrow();
-        
+    @$el.find(".notes-field").autogrow()
+    @$el.find('.savebtn').button()
+    @setSaved()
+    
   renderTableRow: (table) =>
     awesomeRow = []
     rd = @getRenderData()
