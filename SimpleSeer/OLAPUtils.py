@@ -11,8 +11,6 @@ from time import mktime
 from .util import utf8convert
 from .realtime import ChannelManager
 
-
-
 import pandas as pd
 
 import logging
@@ -21,74 +19,66 @@ log = logging.getLogger(__name__)
 
 class OLAPFactory:
     
+    def fromFields(self, fields):
+        # Create an OLAP object from a list of fields desired
+        # Each field should be specified in the same was as Filter fields
+        #   type: one of (frame, framefeature, measurement)
+        #   name: if a frame, specify the field name
+        #         otherwise use dotted notation for the frame/measurement name.field name
+        
+        for f in fields:
+            f['exists'] = 1
+        
+        # Put together the OLAP
+        o = OLAP()
+        o.olapFilter = fields
+        
+        # Fill in the rest with default values
+        return self.fillOLAP(o)
+        
     def fromObject(self, obj):
         # Create an OLAP object from another query-able object
         
         # Find the type of object and 
         # get a result to do some guessing on the data types
+        
+        filters = []
+        
+        f = Filter()
+        inspKeys, measKeys = f.keyNamesHash()
+        
         if type(obj) == Measurement:
-            queryType = 'measurement'
-            r = Result.objects(measurement_id = obj.id).limit(1)[0]
+            filterKeys = measKeys
+            filterType = 'measurement'
         elif type(obj) == Inspection:
-            queryType = 'inspection'
-            r = Result.objects(inspection_id = obj.id).limit(1)[0]
+            filterKeys = inspKeys
+            filterType = 'framefeature'
         else:
             log.warn('OLAP factory got unknown type %s' % str(type(obj)))
+            filterKeys = []
+            filterType = 'unknown'
+            
+        for key in filterKeys:
+            filters.add({'type': filterType, 'name': obj.name + '.' + key, 'exists':1})
         
-        
-        # Setup the fields.  Begin by assuming always want capturetime and id's of measurement, inspection, frame
-        fields = ['capturetime', 'measurement', 'inspection', 'frame']
-        
-        # If the string value is set, assume want to use it.  Otherwise, numeric
-        if (r.string):
-            fields.append('string')
-        else:
-            fields.append('numeric')
         
         # Put together the OLAP
         o = OLAP()
-        o.name = obj.name
-        o.queryType = queryType
-        o.queryId = obj.id
-        o.fields = fields
+        o.olapFilter = filters
         
         # Fill in the rest with default values
         return self.fillOLAP(o)
         
     
     def fillOLAP(self, o):
+        from random import randint
         # Fills in default values for undefined fields of an OLAP
         
-        # First, need to know how results are found
-        if not o.queryType:
-            o.queryType = 'measurement'
-        
-        # Get an object of that type for reference
-        if o.queryType == 'measurement':
-            objType = Measurement
-        elif o.queryType == 'inspection':
-            objType = Inspection
-
-        # If a queryID specified, base everything off that object
-        # Otherwise, base off the first object of that type
-        if o.queryId:
-            obj = objType.objects(id=o.queryId)
-        else:
-            obj = objType.objects[0]
-            o.queryId = obj.id
-        
-        # Create a name based off the object's name and random number
-        if not o.name:
-            from random import randint
-            o.name = obj.name + ' OF ' + str(randint(1, 1000000))
+        o.name = o.olapFilter[0]['name'] + '_' + str(randint(1, 1000000))
             
         # Default to max query length of 1000
         if not o.maxLen:
             o.maxLen = 1000
-            
-        # The standard set of fields per query
-        if not o.fields:
-            o.fields = ['capturetime', 'string', 'measurement', 'inspection', 'frame']
             
         # No mapping of output values
         if not o.valueMap:
@@ -102,10 +92,6 @@ class OLAPFactory:
         if not o.before:
             o.before = None
             
-        # No custom filters
-        if not o.customFilter:
-            o.customFilter = {}
-    
         # Finally, run once to see if need to aggregate
         if not o.statsInfo:
             results = o.execute()
@@ -114,7 +100,6 @@ class OLAPFactory:
             if len(results) > o.maxLen:
                 self.autoAggregate(results, autoUpdate=False)
             
-        
         # Return the result
         # NOTE: This OLAP is not saved 
         return o
@@ -170,7 +155,7 @@ class RealtimeOLAP():
         if sinceok and beforeok:
             # Use only the specified fields
             frame = pd.DataFrame(frame)
-            frame = o.doPostProc(frame, True)
+            frame = o.doPostProc(frame)
         
         return frame
 

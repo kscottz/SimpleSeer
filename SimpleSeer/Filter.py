@@ -161,13 +161,12 @@ class Filter():
         parts.append({'$project': statsProject})
         
         return parts
-
     
     def filterFrames(self, frameQuery):
         # Construct the filter based on fields in the Frame object
         # Note that all timestamps are passed in as epoch milliseconds, but
         # fromtimestamp() assumes they are in seconds.  Hence / 1000
-        
+ 
         filters = {}
         for f in frameQuery:    
             if 'eq' in f:
@@ -184,11 +183,10 @@ class Filter():
                     if f['name'] == 'capturetime':
                         f['lt'] = datetime.fromtimestamp(f['lt'] / 1000)
                     comp['$lt'] = f['lt']
-            
+             
             filters[f['name']] = comp
-        
+         
         return [{'$match': filters}]
-            
     
     def filterMeasurements(self, measQuery, unit):
         # Do the basic pipeline construction for filtering on Measurements
@@ -300,18 +298,19 @@ class Filter():
         
         allfilts = []
         for m in measurements:    
+            meas, c, field = m['name'].partition('.')
             
             comp = []
             if 'eq' in m:
-                comp.append({'$eq': ['$results.string', str(m['eq'])]})
-            
+                comp.append({'$eq': ['$results.' + field, str(m['eq'])]})
             if 'gt' in m:
-                comp.append({'$gte': ['$results.numeric', m['gt']]})
-            
+                comp.append({'$gte': ['$results.' + field, m['gt']]})
             if 'lt' in m:
-                comp.append({'$lte': ['$results.numeric', m['lt']]})    
+                comp.append({'$lte': ['$results.' + field, m['lt']]})
+            if 'exists' in m:
+                comp.append('$results.' + field)
                 
-            comp.append({'$eq': ['$results.measurement_name', str(m['name'])]})
+            comp.append({'$eq': ['$results.measurement_name', meas]})
             combined = {'$and': comp}
             allfilts.append(combined)
                 
@@ -331,6 +330,8 @@ class Filter():
                 comp.append({'$gte': ['$features.' + field, f['gt']]})
             if 'lt' in f:
                 comp.append({'$lte': ['$features.' + field, f['lt']]})
+            if 'exists' in f:
+                comp.append('$features.' + field)
                     
             comp.append({'$eq': ['$features.featuretype', str(feat)]})
             combined = {'$and': comp}
@@ -452,11 +453,14 @@ class Filter():
         # Write the data
         for i, frame in enumerate(frames):
             for j, name in enumerate(keys):
-                if type(frame[name]) == datetime:
-                    s.write(i+1, j, frame[name], dateStyle)
-                else:
-                    s.write(i+1, j, str(frame.get(name, 'N/A')))
-        
+                try:
+                    if type(frame[name]) == datetime:
+                        s.write(i+1, j, frame[name], dateStyle)
+                    else:
+                        s.write(i+1, j, str(frame.get(name, 'N/A')))
+                except KeyError:
+                    pass_
+            
         # Save the the string IO and grab the string data
         wb.save(f)
         output = f.getvalue()
@@ -553,3 +557,5 @@ class Filter():
             flatFrames.append(tmpFrame)
             
         return flatFrames
+	
+		

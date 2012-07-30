@@ -21,30 +21,33 @@
 <body>
 <div class="navbar navbar-fixed-top">
       <div class="navbar-inner">
-        <div class="container">
+        <div class="pushLeft">
           <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </a>
-          <a class="brand" href="#"><img src="img/logo.png" alt="Sight Machine" height="18"/></a>
+          <a class="brand" href="#"><img src="img/logo_small.png" alt="Sight Machine" height="18"/></a>
           <span class="text">
             <span id="client-name"></span>
-            <span id="clock"></span>
-            <script type="text/javascript">
-              $(function() { setInterval(function() { $("#clock").html((new Date()).toString()); }, 1); });
-            </script>            
+    
           </span>
         </div>
       </div>
     </div>
     <div class="row"><div id="messages" class="span10 offset1"></div></div>
 
-    <div id="main" class="container">
+    <div id="main" class="container-fluid">
     </div> <!-- /container -->
-    <div id="lost_connection" title="Error">Could not connect to the server. Please try again later.</div>
+    <div id="lost_connection" title="Error"></div>
+    <!--<div id="app_load" class="notification_box">
+      <h2>Application Loading...</h2>
+      <div class="text">
+        Please wait patiently as the application loads.
+      </div>
+    </div>-->
     <div id="browser_fail" style="display: none;">
-      <h2>UH OH....</h2>
+      <h2>Please Stand By...</h2>
       <div class="text">
         <script>
           var ie = (function(){
@@ -61,12 +64,26 @@
         </script>
       </div>
     </div>
+    <div class="modal fade" id="loadThrob">
+      <div class="modal-body">
+        <p style="text-align: center; margin-top: 5px;"><img src="/img/loading.gif"></p>
+      </div>
+    </div>    
 </body>
 </html>
 
 <script>
   setTimeout(function() {
-    if( typeof SimpleSeer === 'undefined' ) { $("#browser_fail").show(); }
-    if( $("#browser_fail").is(':visible') == true ) { $("#lost_connection").hide(); }
-  }, 2000);
+    if( typeof SimpleSeer === 'undefined' ) {
+      $("#browser_fail").show();
+    } else {
+      $("#app_load").hide();
+      $("#loadThrob").modal({
+        "backdrop": "static",
+        "keyboard": false,
+        "show": false
+      });
+    }
+    if( $("#browser_fail").is(':visible') == true ) { $("#lost_connection, #app_load").hide(); }
+  }, 1500);
 </script>

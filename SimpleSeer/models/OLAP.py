@@ -15,6 +15,7 @@ from SimpleSeer.models.Measurement import Measurement
 from SimpleSeer.models.Inspection import Inspection
 
 import pandas as pd
+import numpy as np
 
 log = logging.getLogger(__name__)
 
@@ -22,59 +23,42 @@ log = logging.getLogger(__name__)
 #################################
 # name: Name of the OLAP object
 # maxLen: Maximum numer of results to return, aggregate if number exceeds limit
-# queryType: type of query: measurement or inspection.  e.g., 'measurement'
-# queryId: the id of the object as referenced in previous step.  e.g., ObjectId('4fdbac481d41c834fb000001')
-# fields: a list of fields to be returned.  e.g., ['capturetime', 'numeric', 'measurement']
-# groupTime: time groupby interval: minute, hour, day
+# groupTime: used for aggreagating result.  Possible values are: minute, hour, day
 # valueMap: used to map output values to other values.  dict where the key is substituted with the value.  e.g., {'red': 3} will look for red and replace with 3.
-#               must include 'field': the name of the field to map, e.g., {'field': 'string'}
-#               must include 'default': the value when no other entry in the map works
-#               rest of fieds are key/val pairs for the substitution
+#       must include 'field': the name of the field to map, e.g., {'field': 'string'}
+#       must include 'default': the value when no other entry in the map works
+#       rest of fieds are key/val pairs for the substitution
 # since: limit to results where capturetime greater than time specified.  Time in epoch seconds
 # before: limit to results where capturetime less than time specified.  Time in epoch seconds
-# customFilter: dict of additional filter values.  e.g., {'string': 'yellow'}
-# groupTime: used for aggreagating result.  Possible values are: minute, hour, day
+# olapFilter: filter parameters for OLAP, same as with Filters
 # statsInfo: Select how to group and aggregate data.  List of dicts.  In each dict, the key is the name of the function and the val is the name of the field on which to apply the function
 #       Allowed functions based on mongo aggregation framework, such as first, last, max, min, avg, sum
-# postProc: Stats function that require global data set (don't work well with mongo)
-#       Allowed functions: movingCount
+# notNull: specify a default integer value to fill in any missing fields
 #################################
 
   
 class OLAPSchema(fes.Schema):
     name = fev.UnicodeString()            
     maxLen = fev.Int()
-    queryType = fev.UnicodeString()
-    queryId = fev.UnicodeString()
-    #queryIds = V.JSON(if_empty=[], if_missing=None)
-    #fields = V.JSON(if_empty=dict, if_missing=None)
-    #valueMap = V.JSON(if_empty=dict, if_missing=None)
     groupTime = fev.UnicodeString()
+    valueMap = V.JSON(if_empty=dict, if_missing=None)
     since = fev.Int()
     before = fev.Int()
-    #customFilter = V.JSON(if_empty=dict, if_missing=None)   
-    #statsInfo = V.JSON(if_empty=dict, if_missing=None)
-    #postProc = V.JSON(if_empty=dict, if_missing=None)
+    olapFilter = V.JSON(if_empty=dict, if_missing=None)
+    statsInfo = V.JSON(if_empty=dict, if_missing=None)
     notNull = fev.Int()
-    #linkedOLAP = V.JSON()
-
+    
 class OLAP(SimpleDoc, mongoengine.Document):
 
     name = mongoengine.StringField()
     maxLen = mongoengine.IntField()
-    queryType = mongoengine.StringField()
-    queryId = mongoengine.ObjectIdField()
-    queryIds = mongoengine.ListField()
-    fields = mongoengine.ListField()
     groupTime = mongoengine.StringField()
     valueMap = mongoengine.ListField()
     since = mongoengine.IntField()
     before = mongoengine.IntField()
-    customFilter = mongoengine.DictField()
+    olapFilter = mongoengine.ListField()
     statsInfo = mongoengine.ListField()
-    postProc = mongoengine.DictField()
     notNull = mongoengine.IntField()
-    linkedOLAP = mongoengine.ListField()
     
     meta = {
         'indexes': ['name']
@@ -86,67 +70,95 @@ class OLAP(SimpleDoc, mongoengine.Document):
 
     def execute(self, filterParams = {}):
         
+        filterParams = self.mergeParams(filterParams)
+        
         # Get the raw data
         results = self.doQuery(filterParams)
         
-        #if len(results) > self.maxLen:
-        #    results = self.autoAggregate(results)
-        
-        
-        
-        results = self.doPostProc(results)
+        # Run any descriptive statistics or aggregation
         results = self.doStats(results)
         
+        # Handle auto-aggregation
+        if len(results) > self.maxLen:
+            results = self.autoAggregate(results)
+        
+        # If necessary, remap the values in post processing
+        results = self.doPostProc(results)
+        
+        # Check for empty results and handle if necessary
         if not len(results) and type(self.notNull) == int:
             results = self.defaultOLAP()
         
+        # Convert Pandas DataFrame into dict
         return [v for v in results.transpose().to_dict().values()]
+    
+    def mergeParams(self, passedParams):
+        # Take the passed parameters and override the built-in parameters 
+        merged = []
+        for f in self.olapFilter:
+            filtFound = 0
+            for p in passedParams:
+                if p['type'] == f['type'] and p['name'] == f['name']:
+                    merged.append(p)
+                    filtFound = 1
+            if not filtFound: merged.append(f)
         
+        return merged
         
-    def doPostProc(self, results, realtime=False):
-        
+    def doPostProc(self, results):
+        # Remap fields if necessary
         for vmap in self.valueMap:
             field = vmap['field']
             default = vmap['default']
             newvals = vmap['valueMap']
             
             results[field] = results[field].apply(lambda x: newvals.get(x, default))
-            results[field] = results[field].apply(lambda x: newvals.get(x, default))
         
         return results
 
-    def doStats(self, results, realtime=False):
+    def doStats(self, results):
+        for stat in self.statsInfo:
+            field = stat['field']
+            fn = stat['fn']
+            param = stat['param']
+            
+            if fn[:7] == 'rolling':
+                # Rolling stats don't change the size of the data, so can just add the field
+                pdFunc = pd.__getattribute__(fn)
+                results[field + '.' + fn] = pdFunc(results[field], param)
+            else:
+                # First, have to handle the treatment of different types of variables
+                # If it is a numeric variable, (np.float64), do the actual stats function specified
+                # Else, take the first element from the series
+                keyFuncs = {}
+                for key in results.keys():
+                    if type(results[key][0]) == np.float64:
+                        keyFuncs[key] = np.__getattribute__(fn)
+                    else:
+                        keyFuncs[key] = self.firstNotNan #lambda x: [type(y) for y in x]
+                
+                # Group splits the data frame up into bins
+                grouped = results.groupby(lambda x: results[field][x].__getattribute__(param))
+                # And run the functions
+                results = grouped.agg(keyFuncs)
+                
         return results
 
-        # Re implement this stuff
-        if 'movingCount' in self.postProc:
-            if realtime:
-                full_res = self.doQuery()
-                results['movingCount'] = len(full_res) + 1
-                
-            else:
-                for counter, r in enumerate(results):
-                    r['movingCount'] = counter + 1
-
+    def firstNotNan(self, x):
+        for y in x:
+            if type(y) != float: return y
+        return 0
 
     def doQuery(self, filterParams):
+        # Run the query, returning the results as a Pandas dataframe.
+        # All the heavy lifting now done by Filters
         f = Filter()
         
-        queryParams = filterParams
-        if self.queryType == 'measurement_id':
-            m = Measurement.objects(id=self.queryId)[0]
-            queryParams = {'type': 'measurement', 'name': m.name}
-        elif self.queryType == 'inspection_id':
-            log.warn('Can not currently run olaps on inspections')
-            # TODO: Implement this
-        
-        count, frames = f.getFrames([queryParams], unit='result')
+        count, frames = f.getFrames(filterParams, unit='result')
         flat = f.flattenFrame(frames)
         
         return pd.DataFrame(flat)
 
-  
-  
     def autoAggregate(self, resultSet, autoUpdate = True):
         oldest = resultSet[-1]
         newest = resultSet[0]
@@ -155,27 +167,17 @@ class OLAP(SimpleDoc, mongoengine.Document):
         timeRange = elapsedTime / self.maxLen
             
         # Set the grouping interval
-        if timeRange < 60: self.groupTime = 'minute'
-        elif timeRange < 3600: self.groupTime = 'hour'
-        else: self.groupTime = 'day'
+        if timeRange < 60: groupTime = 'minute'
+        elif timeRange < 3600: groupTime = 'hour'
+        else: groupTime = 'day'
 
         # Decide how to group
         # If already grouped (has stats info), don't change it
-        if len(self.statsInfo) == 0:
-            # For string items, use the last element in the group
-            # For numeric items, take the average
-            for key, val in oldest.iteritems():
-                
-                if not key == '_id':
-                    if (type(val) == int) or (type(val) == float):
-                        self.statsInfo.append({'avg': key})
-                    else:
-                        self.statsInfo.append({'first': key})
-        
+        self.statsInfo.append({'field':'capturetime', 'fn': 'mean', 'param': groupTime})    
+            
         if autoUpdate:
             self.save()
             return self.doQuery()
-        
         else:
             return []
 

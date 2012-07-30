@@ -195,7 +195,13 @@ def getFilter(filter_type, filter_name, filter_format):
 	else:
 		return {'error': 'no result found'}
     
-
+@route('/features', methods=['GET'])
+@util.jsonify
+def features():	
+	f = Filter()
+	return f.getFilterOptions()
+	
+	
 #TODO, abstract this for layers and thumbnails        
 @route('/grid/imgfile/<frame_id>', methods=['GET'])
 def imgfile(frame_id):

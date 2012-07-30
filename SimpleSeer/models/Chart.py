@@ -174,7 +174,7 @@ class Chart(SimpleDoc, mongoengine.Document):
             o = o[0]
             data = o.execute()
         else:
-            log.warn("Found %d OLAPS in query for %s" % (len(o), olap))
+            log.warn("Found %d OLAPS in query for %s" % (len(o), o))
             data = []
         
         return self.mapData(data)
