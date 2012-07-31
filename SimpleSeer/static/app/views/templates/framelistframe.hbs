@@ -1,17 +1,12 @@
 <div id="image-view">
   <div class="image-view-item">
     <div class="ivi-right">
-      <table>
-        <tr>
-          <td class="item-detail">Capture Time:</td>
-          <td class="item-detail-value">{{capturetime}}</td>
-        </tr>           
-      </table>
-
-      <div class="tableSpacer">
-        <table>
-          {{#featurelist features}}{{/featurelist}}          
-        </table>
+      <div class="tableSpacerListView">
+        <p class="item-detail">Capture Time:</p>
+        <p class="item-detail-value">{{capturetime}}</p>
+      </div>
+      <div class="tableSpacer tableSpacerListView">
+        {{#featurelist features}}{{/featurelist}}          
       </div>
 
       <div class="tableSpacer">
@@ -25,7 +20,10 @@
         </table>
       </div>
       <div class="item-detail tableSpacer">Notes:</div>
-      <textarea class="notes-field">{{notes}}</textarea>  
+      <textarea class="notes-field">{{notes}}</textarea>
+      <div class="tableSpacer">
+        <button class="btn savebtn">Save</button>
+      </div>
     </div>
     <div class="ivi-left">
       <div class="ivi-left-thumb-contain">

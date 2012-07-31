@@ -6,17 +6,12 @@
             <label><input id="toggleProcessing" type="checkbox" checked="checked">Show Markup</label>
           </div>
           <div id="properties" class="ivi-right">
-            <table>
-              <tr>
-                <td class="item-detail">Capture Time:</td>
-                <td class="item-detail-value">{{capturetime}}</td>
-              </tr>                 
-            </table>
-
+            <div>
+            <p class="item-detail">Capture Time:</p>
+            <p class="item-detail-value">{{capturetime}}</p>
+            </div>
             <div class="tableSpacer">
-              <table>
                 {{#featurelist features}}{{/featurelist}}          
-              </table>
             </div>
 
             <div class="tableSpacer">

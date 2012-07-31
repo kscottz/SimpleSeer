@@ -186,12 +186,16 @@ p.frame_icons{
 
   #frameHolder {
     position: fixed;
-    top: 48px;
+    top: 0;
     left: 0;
     width: 100%;
+    height: 100%;
+    padding-top: 48px;
     box-sizing: border-box !important;
     -moz-box-sizing: border-box;
     padding-left: 300px;
+
+    #display-zoom {cursor: move;}
   }
 }
 
@@ -235,6 +239,10 @@ p.frame_icons{
 .notesEdit {
   margin:-5px;
   width:100%;
+}
+
+.savebtn {
+  float:right;
 }
 
 #features .set {
@@ -870,7 +878,7 @@ a.video{
   padding: 10px;
   border-color: #bbb;
   textarea { width: 218px; min-width: 218px; max-width: 218px; margin-bottom: 1px}
-  .item-detail { width: 228px; font-weight: bold;}
+  .item-detail { font-weight: bold;}
   .item-detail-value { text-align: right; font-weight: bold; }
   .tableSpacer {
       border-top: 1px solid #ccc;
@@ -893,14 +901,28 @@ a.video{
 }
 
 .ivi-right td.item-detail{
-  width:160px;
+  width: 180px;
   height: 21px;
+}
+
+.ivi-right p.item-detail{
+  margin-bottom:0;
+  float:left;
+  height: 21px;
+}
+.ivi-right .tableSpacerListView p.item-detail span{
+  display:none;
 }
 .ivi-right td.item-detail-value{
   width:220px;
   span { color: #000; }
 }
 
+.ivi-right .tableSpacerListView p.item-detail-value{
+  text-align: right;
+  margin-right:40px;
+  span { color: #000; }
+}
 .ivi-left .btn {
   padding: 4px 12px;
 }
@@ -985,6 +1007,10 @@ table.tablesorter tfooter tr th {
   border: 1px solid #ddd !important;
 }
 
+table.tablesorter thead tr .header {
+  padding-right: 18px;
+}
+
 table.tablesorter tbody tr.odd td {
     background-color: #fafafa !important;
 }
@@ -1001,6 +1027,7 @@ table.tablesorter tbody tr.odd td {
     position: fixed;
     margin: 0;
     top: 48px !important;
+    
   }
 
   #displayimage {
