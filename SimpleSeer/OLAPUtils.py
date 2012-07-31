@@ -116,22 +116,22 @@ class RealtimeOLAP():
         for feat in frame.features:
             conds.append({'queryType':'inspection_id', 'queryId': feat.inspection})
         
-        f = Filter()
-        f2 = f.flattenFrame([frame])
             
         olaps = OLAP.objects(__raw__={'$or': conds}) 
         
-        if olaps:
-            f = Filter()
-            frame = f.flattenFrame([frame])
-            for o in olaps:
-                # If no statistics, send result on its way
-                # If there are stats, it will be handled later by stats scheduler
-                if not o.statsInfo:
-                    oFrame = self.formatFrame(o, frame)
-                    dFrame = [v for v in oFrame.transpose().to_dict().values()][0]
-                    if len(dFrame):
-                        self.sendOLAP(dFrame, o)
+        print len(olaps)
+        
+        f = Filter()
+        flattened = f.flattenFrame([frame])
+        
+        for o in olaps:
+            # If no statistics, send result on its way
+            # If there are stats, it will be handled later by stats scheduler
+            if not o.statsInfo:
+                formatted = self.formatFrame(o, flattened)
+                dFrame = [v for v in formatted.transpose().to_dict().values()][0]
+                if len(dFrame):
+                    self.sendOLAP(dFrame, o)
 
                  
     def sendOLAP(self, data, o):
@@ -166,6 +166,7 @@ class RealtimeOLAP():
                 olap = str(o.name),
                 data = data)
         
+            print 'going to send' + str(msgdata)
             olapName = 'Chart/%s/' % utf8convert(subname) 
             ChannelManager().publish(olapName, dict(u='data', m=msgdata))
             

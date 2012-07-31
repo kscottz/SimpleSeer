@@ -43,6 +43,7 @@ class FrameFeature(SimpleEmbeddedDoc, mongoengine.EmbeddedDocument):
     #because features are essentially immutable
     
     inspection = mongoengine.ObjectIdField()
+    inspection_name = mongoengine.StringField()
     children = mongoengine.ListField(mongoengine.GenericEmbeddedDocumentField())
     
     #feature attributes need to be in this list to be queryable
