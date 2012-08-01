@@ -59,8 +59,19 @@ class ChannelManager(object):
         channel = self._channels.get(name, None)
         if channel is None: return
         channel.pop(id(sub_sock), None)
+        self.transientCharts(channel, name)
         if not channel:
             self._channels.pop(name, None)
+
+    def transientCharts(self, channel, name):
+        from OLAPUtils import OLAPFactory
+        if len(channel) == 0:
+            parts = name.split('/')
+            if len(parts) >= 2 and parts[0] == 'Chart':
+                of = OLAPFactory()
+                log.info('Deleting transient chart %s' % parts[1])
+                of.removeTransient(parts[1])
+            
 
 class RealtimeNamespace(BaseNamespace):
 

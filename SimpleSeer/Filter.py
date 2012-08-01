@@ -43,14 +43,14 @@ class Filter():
         # Sort the results
         pipeline += self.sort(sortinfo)
         
-        #for p in pipeline:
-        #    print 'LINE: %s' % str(p)
+        for p in pipeline:
+            print 'LINE: %s' % str(p)
         
         # This is all done through mongo aggregation framework
         db = Frame._get_db()
         cmd = db.command('aggregate', 'frame', pipeline = pipeline)
         results = cmd['result']
-        
+        print results
         # Perform the skip/limit 
         # Note doing this in python instead of mongo since need original query to give total count of relevant results
         if skip < len(results):
@@ -468,14 +468,18 @@ class Filter():
             # Features can override their method name
             # To get actual plugin name, need to go through the inspection
             # Then use plugin to find the name of its printable fields
-            plugin = i.get_plugin(i.method)
-            if 'printFields' in dir(plugin):
-                featureKeys[i.name] = plugin.printFields()
-                # Always make sure the featuretype field is listed
-                featureKeys[i.name].append('featuretype')
-            else:
-                featureKeys[i.name] = ['featuretype', 'x', 'y']
-        
+            try:
+                plugin = i.get_plugin(i.method)
+                if 'printFields' in dir(plugin):
+                    featureKeys[i.name] = plugin.printFields()
+                    # Always make sure the featuretype field is listed
+                    featureKeys[i.name].append('featuretype')
+                else:
+                    featureKeys[i.name] = ['featuretype', 'x', 'y']
+            except ValueError:
+                log.info('No plugin found for %s, using default fields' % i.method)
+                featureKeys[i.name] = ['featuretype', 'featuredata', 'x', 'y']
+                
         # Becuase of manual measurements, need to look at frame results to figure out if numeric or string fields in place
         for m in Measurement.objects:
             # Have some manual measurements, which lack an actual plugin
@@ -521,7 +525,7 @@ class Filter():
             
             # Grab the fields from the frame itself
             for key in self.fieldNames:
-                if key == '_id':
+                if key == '_id' and 'id' in frame:
                     key = 'id'
                 tmpFrame[key] = frame[key]
             
