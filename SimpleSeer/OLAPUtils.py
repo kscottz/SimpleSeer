@@ -11,6 +11,7 @@ from time import mktime
 from .util import utf8convert
 from .realtime import ChannelManager
 
+from random import randint
 import pandas as pd
 
 import logging
@@ -18,6 +19,64 @@ log = logging.getLogger(__name__)
 
 
 class OLAPFactory:
+    
+    def createTransient(self, filters, originalChart):
+        # A transient OLAP is one that should be delted when no subscriptions are listening
+        # This is needed for OLAPs that publish realtime but are the result of filters
+        
+        from .models.Chart import Chart
+        
+        # First, create the core OLAP
+        originalOLAP = OLAP.objects(name = originalChart.olap)[0]
+        o = self.fromFilter(filters, originalOLAP)
+        o.transient = True
+        o.save()
+        
+        # Create the chart to point to it
+        # For a chart only used for realtime, we realy only care about the data maps
+        c = Chart()
+        c.name = originalChart.name + '_' + str(randint(1, 1000000))
+        c.metaMap = originalChart.metaMap
+        c.dataMap = originalChart.dataMap
+        c.olap = o.name
+        c.save()
+    
+    def removeTransient(self, chartName):
+        from .models.Chart import Chart
+        
+        cs = Chart.objects(name = chartName)
+        if cs:
+            c = cs[0]
+        else:
+            log.warn('Asked to cleanup %s, but it does not exist' % chartName)
+            return
+            
+        os = OLAP.objects(name = c.olap)
+        if os:
+            o = os[0]
+        else:
+            log.warn('No OLAPs associated with %s' % chartName)
+            return
+            
+        if o.transient:
+            log.info('Deleting transient OLAP: %s' % o.name)
+            o.delete()
+            log.info('Deleting associated chart: %s' % c.name)
+            c.delete()
+        else:
+            log.info('Nobody listening to OLAP %s' % o.name)
+        
+        
+        
+    def fromFilter(self, filters, oldOLAP = None):
+        
+        newOLAP = OLAP()
+        if oldOLAP:
+            newOLAP.olapFilter = oldOLAP.mergeParams(filters)
+        else:
+            newOLAP.olapFilter = filters
+            
+        return self.fillOLAP(newOLAP)
     
     def fromFields(self, fields):
         # Create an OLAP object from a list of fields desired
@@ -71,10 +130,12 @@ class OLAPFactory:
         
     
     def fillOLAP(self, o):
-        from random import randint
         # Fills in default values for undefined fields of an OLAP
         
-        o.name = o.olapFilter[0]['name'] + '_' + str(randint(1, 1000000))
+        if o.olapFilter:
+            o.name = o.olapFilter[0]['name'] + '_' + str(randint(1, 1000000))
+        else:
+            o.name = 'GeneratedOLAP_' + str(randint(1, 1000000))
             
         # Default to max query length of 1000
         if not o.maxLen:
@@ -82,7 +143,7 @@ class OLAPFactory:
             
         # No mapping of output values
         if not o.valueMap:
-            o.valueMap = {}
+            o.valueMap = []
     
         # No since constratint
         if not o.since:
@@ -116,22 +177,22 @@ class RealtimeOLAP():
         for feat in frame.features:
             conds.append({'queryType':'inspection_id', 'queryId': feat.inspection})
         
-        f = Filter()
-        f2 = f.flattenFrame([frame])
             
         olaps = OLAP.objects(__raw__={'$or': conds}) 
         
-        if olaps:
-            f = Filter()
-            frame = f.flattenFrame([frame])
-            for o in olaps:
-                # If no statistics, send result on its way
-                # If there are stats, it will be handled later by stats scheduler
-                if not o.statsInfo:
-                    oFrame = self.formatFrame(o, frame)
-                    dFrame = [v for v in oFrame.transpose().to_dict().values()][0]
-                    if len(dFrame):
-                        self.sendOLAP(dFrame, o)
+        print len(olaps)
+        
+        f = Filter()
+        flattened = f.flattenFrame([frame])
+        
+        for o in olaps:
+            # If no statistics, send result on its way
+            # If there are stats, it will be handled later by stats scheduler
+            if not o.statsInfo:
+                formatted = self.formatFrame(o, flattened)
+                dFrame = [v for v in formatted.transpose().to_dict().values()][0]
+                if len(dFrame):
+                    self.sendOLAP(dFrame, o)
 
                  
     def sendOLAP(self, data, o):
@@ -166,6 +227,7 @@ class RealtimeOLAP():
                 olap = str(o.name),
                 data = data)
         
+            print 'going to send' + str(msgdata)
             olapName = 'Chart/%s/' % utf8convert(subname) 
             ChannelManager().publish(olapName, dict(u='data', m=msgdata))
             

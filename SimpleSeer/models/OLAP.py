@@ -59,6 +59,7 @@ class OLAP(SimpleDoc, mongoengine.Document):
     olapFilter = mongoengine.ListField()
     statsInfo = mongoengine.ListField()
     notNull = mongoengine.IntField()
+    transient = mongoengine.BooleanField()
     
     meta = {
         'indexes': ['name']
@@ -68,7 +69,7 @@ class OLAP(SimpleDoc, mongoengine.Document):
     def __repr__(self):
         return "<OLAP %s>" % self.name
 
-    def execute(self, filterParams = {}):
+    def execute(self, filterParams = []):
         
         filterParams = self.mergeParams(filterParams)
         

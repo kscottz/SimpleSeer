@@ -73,6 +73,10 @@ class Inspection(SimpleDoc, WithPlugins, mongoengine.Document):
     #list of dicts for morph operations
     #TODO validate agains morph operations
 
+    meta = {
+        'indexes': ['name']
+    }
+
     def __repr__(self):
       return "[%s Object <%s> ]" % (self.__class__.__name__, self.name)
                                            
