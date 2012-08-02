@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 
 class Filter():
     
-    fieldNames = ['_id', 'camera', 'capturetime', 'results', 'features']
+    fieldNames = ['_id', 'camera', 'capturetime', 'results', 'features', 'metadata']
     
     def getFrames(self, allFilters, unit='frame', skip=0, limit=float("inf"), sortinfo = {}, statsInfo = {}, groupTime = '', valueMap = {}):
         
@@ -39,7 +39,6 @@ class Filter():
         pipeline += self.filterMeasurements(measurements, unit)            
         pipeline += self.filterFeatures(features, unit)
         
-        
         # Sort the results
         pipeline += self.sort(sortinfo)
         
@@ -50,7 +49,7 @@ class Filter():
         db = Frame._get_db()
         cmd = db.command('aggregate', 'frame', pipeline = pipeline)
         results = cmd['result']
-        print results
+        
         # Perform the skip/limit 
         # Note doing this in python instead of mongo since need original query to give total count of relevant results
         if skip < len(results):
@@ -61,12 +60,7 @@ class Filter():
         else:
             return 0, []
         
-        #frames = []
-        #for r in results:
-        #    frames.append(Frame.objects(id=r['_id'])[0])
-        
         return len(cmd['result']), results    
-        #return len(cmd['result']), frames    
         
     def initialFields(self, groupTime, valueMap):
         # This is a pre-filter of the relevant fields
@@ -78,7 +72,7 @@ class Filter():
         # First select the fields from the frame to include
         for p in self.fieldNames:
             fields[p] = 1
-            
+        
         # And we always need the features and results
         fields['features'] = 1
         fields['results'] = 1
@@ -279,6 +273,8 @@ class Filter():
                 group[key] = {'$first': '$' + key}
             
         group['_id'] = '$_id'
+        # But a lot of stuff also wants an id instead of _id
+        group['id'] = {'$first': '$_id'}
 
         return proj, group
     
@@ -474,11 +470,14 @@ class Filter():
                     featureKeys[i.name] = plugin.printFields()
                     # Always make sure the featuretype field is listed
                     featureKeys[i.name].append('featuretype')
+                    print 'FOUND for ' + str(plugin)
                 else:
-                    featureKeys[i.name] = ['featuretype', 'x', 'y']
+                    featureKeys[i.name] = ['featuretype', 'featuredata']
+                    print 'NOT FOUND'
             except ValueError:
+                print 'NO PLUGIN'
                 log.info('No plugin found for %s, using default fields' % i.method)
-                featureKeys[i.name] = ['featuretype', 'featuredata', 'x', 'y']
+                featureKeys[i.name] = ['featuretype', 'featuredata']
                 
         # Becuase of manual measurements, need to look at frame results to figure out if numeric or string fields in place
         for m in Measurement.objects:

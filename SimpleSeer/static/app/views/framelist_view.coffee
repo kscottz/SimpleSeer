@@ -49,9 +49,9 @@ module.exports = class FramelistView extends View
   
   postFetch:()=>
     $('#loadThrob').modal "hide"
-    #url = @filtercollection.getUrl(true)
-    #$('#csvlink').attr('href','/downloadFrames/csv'+url)
-    #$('#excellink').attr('href','/downloadFrames/excel'+url)  
+    url = @filtercollection.getUrl(true)
+    $('#csvlink').attr('href','/downloadFrames/csv'+url)
+    $('#excellink').attr('href','/downloadFrames/excel'+url)  
   
   tabData: ()=>
     $('#data-view').show()
@@ -180,11 +180,6 @@ module.exports = class FramelistView extends View
     @viewIsScrolled()    
 
   openUpExpanded: (element, frame, model) =>
-    if @lastModel is model
-      @hideImageExpanded()
-      @lastModel = ""
-      return
-      
     element.find(".image-view-item").addClass("currentExpanded");
     
     thumbnail = element.find(".thumb")

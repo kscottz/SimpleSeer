@@ -138,6 +138,7 @@ def getFrames(filter_params):
 	
 	retVal = dict(frames=frames, total_frames=total_frames)
 	
+	print 'about to return'
 	if retVal:
 		return retVal
 	else:
