@@ -17,7 +17,6 @@ module.exports = class FrameDetailView extends View
     'click .clickEdit'  : 'switchStaticMeta'
     'blur .clickEdit'  : 'switchInputMeta'
     'change .notes-field' : 'updateNotes'
-    'resize window': 'updateScale'
     'dblclick #display-zoom': 'clickZoom'
 
   togglePro: =>
@@ -70,7 +69,7 @@ module.exports = class FrameDetailView extends View
       @pjs.background(0,0)
       @pjs.size $('#display-img').width(), $("#display-img").height()
       @pjs.scale @calculateScale() / i
-      if @model.get('features').length then @model.get('features').each (f) => f.render(@pjs)
+      if @model.get('features') then @model.get('features').each (f) => f.render(@pjs)
     
     $("#zoomer").data("last-zoom", ui.zoom)
     
@@ -147,11 +146,23 @@ module.exports = class FrameDetailView extends View
     scale
 
   updateScale: =>
+    console.log "work"
+    viewPort = $('#display-zoom')
     scale = @calculateScale()
     if scale is $("#zoomer").data("orig-scale")
       return
 
     fullHeight = $(window).height() - 48
+    
+    ui = {zoom: $("#zoomer").data("last-zoom")}
+    
+    viewPort.css({
+      'position': 'relative',
+      'width': (@.model.attributes.width * ui.zoom)+'px',
+      'height': (@.model.attributes.height * ui.zoom)+'px',
+    });
+    
+    $('#display').css("height", (@.model.attributes.height * scale))    
       
     $("#zoomer").data("orig-scale", scale)
     $("#zoomer").zoomify("option", {
@@ -162,6 +173,9 @@ module.exports = class FrameDetailView extends View
     })
   
   postRender: =>
+    $(window).resize =>
+      @updateScale()
+      
     @addMetaBox()
     scale = @calculateScale()
 
@@ -185,7 +199,7 @@ module.exports = class FrameDetailView extends View
     @pjs.background(0,0)
     @pjs.size $('#display-img').width(), @model.get("height") * scale
     @pjs.scale scale
-    if @model.get('features').length then @model.get('features').each (f) => f.render(@pjs)
+    if @model.get('features') then @model.get('features').each (f) => f.render(@pjs)
 
     $("#display-zoom").draggable({
       drag: (e, ui) ->
