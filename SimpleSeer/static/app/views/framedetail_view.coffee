@@ -146,7 +146,6 @@ module.exports = class FrameDetailView extends View
     scale
 
   updateScale: =>
-    console.log "work"
     viewPort = $('#display-zoom')
     scale = @calculateScale()
     if scale is $("#zoomer").data("orig-scale")
