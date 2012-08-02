@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 
 class Filter():
     
-    fieldNames = ['camera', 'capturetime']
+    fieldNames = ['_id', 'camera', 'capturetime', 'results', 'features', 'metadata']
     
     def getFrames(self, allFilters, unit='frame', skip=0, limit=float("inf"), sortinfo = {}, statsInfo = {}, groupTime = '', valueMap = {}):
         
@@ -34,6 +34,7 @@ class Filter():
                 
         if frames:
             pipeline += self.filterFrames(frames)
+        
             
         pipeline += self.filterMeasurements(measurements, unit)            
         pipeline += self.filterFeatures(features, unit)
@@ -41,8 +42,8 @@ class Filter():
         # Sort the results
         pipeline += self.sort(sortinfo)
         
-        #for p in pipeline:
-        #    print 'LINE: %s' % str(p)
+        for p in pipeline:
+            print 'LINE: %s' % str(p)
         
         # This is all done through mongo aggregation framework
         db = Frame._get_db()
@@ -60,8 +61,7 @@ class Filter():
             return 0, []
         
         return len(cmd['result']), results    
-    
-    
+        
     def initialFields(self, groupTime, valueMap):
         # This is a pre-filter of the relevant fields
         # It constructs a set of fields helpful when grouping by time
@@ -72,7 +72,7 @@ class Filter():
         # First select the fields from the frame to include
         for p in self.fieldNames:
             fields[p] = 1
-            
+        
         # And we always need the features and results
         fields['features'] = 1
         fields['results'] = 1
@@ -95,23 +95,6 @@ class Filter():
                                     'month': { '$month': '$capturetime' }, 
                                     'dayOfMonth': { '$dayOfMonth': '$capturetime' }}}
  
-        # Change the value of some fields for future filtering operations
-        # Disable until can insert into unwind operations
-        # Or place in python code with Pandas
-        """
-        if valueMap:
-            mapField = valueMap['field'] 
-            
-            # Grab the name of the field
-            fieldName = '$' + mapInfo.pop('field')    
-            # Grab the 'else' term
-            defaultVal = mapInfo.pop('default')
-        
-            maps = self.recurseMap(fieldName, defaultVal, mapInfo)
-            
-            fields[mapField] = maps
-        """
-        
         return [{'$project': fields}]
     
     
@@ -125,8 +108,6 @@ class Filter():
         else:
             return defaultVal
 
-    
-    
     def basicStats(self, statsInfo):
         stats = {}
         
@@ -205,14 +186,14 @@ class Filter():
         parts.append({'$unwind': '$results'})
         parts.append({'$project': proj})
             
-        # If the unit of analysis is not 'results', re-group the result objects and filter at the group level
-        if unit != 'result':
-            parts.append({'$group': group})
-            if measQuery:
-                parts.append({'$match': {'allmeasok': len(measQuery)}})
-        
-        elif measQuery:
-            parts.append({'$match': {'measok': 1}})
+        ## If the unit of analysis is not 'results', re-group the result objects and filter at the group level
+        #if unit != 'result':
+        parts.append({'$group': group})
+        if measQuery:
+            parts.append({'$match': {'allmeasok': len(measQuery)}})
+    
+        #elif measQuery:
+        #    parts.append({'$match': {'measok': 1}})
         
         return parts
     
@@ -230,12 +211,12 @@ class Filter():
         parts.append({'$unwind': '$features'})
         parts.append({'$project': proj})
         
-        if unit != 'feature':
-            parts.append({'$group': group})
-            if featQuery:
-                parts.append({'$match': {'allfeatok': len(featQuery)}})
-        elif featQuery:
-            parts.append({'$match': {'featok': 1}})
+        #if unit != 'feature':
+        parts.append({'$group': group})
+        if featQuery:
+            parts.append({'$match': {'allfeatok': len(featQuery)}})
+        #elif featQuery:
+        #    parts.append({'$match': {'featok': 1}})
         
         return parts
     
@@ -279,18 +260,21 @@ class Filter():
                 proj[field + '.' + f] = 1
         
         
-        for key in Frame._fields:
+        for key in self.fieldNames:
             # Have to rename the id field since $group statements assume existence of _id as the group_by parameter
             if key == 'id':
                 key = '_id'
             proj[key] = 1
             
-            if (key == 'results') or (key == 'features'):
+            #if (key == 'results') or (key == 'features'):
+            if key == field:
                 group[key] = {'$addToSet': '$' + key}
             else:
                 group[key] = {'$first': '$' + key}
             
         group['_id'] = '$_id'
+        # But a lot of stuff also wants an id instead of _id
+        group['id'] = {'$first': '$_id'}
 
         return proj, group
     
@@ -474,40 +458,43 @@ class Filter():
         featureKeys = {}
         resultKeys = {}
         
-        for frame in Frame.objects:
-            for feature in frame.features:
-                if feature['featuretype'] not in featureKeys:
-                    # Features can override their method name
-                    # To get actual plugin name, need to go through the inspection
-                    # Then use plugin to find the name of its printable fields
-                    i = Inspection.objects(id=feature.inspection)[0]
-                    plugin = i.get_plugin(i.method)
-                    if 'printFields' in dir(plugin):
-                        featureKeys[feature['featuretype']] = plugin.printFields()
-                        featureKeys[feature['featuretype']].append('featuretype')
-                    else:
-                        featureKeys[feature['featuretype']] = ['featuretype', 'x', 'y']
+        Inspection.register_plugins('seer.plugins.inspection')
+
+        for i in Inspection.objects:
+            # Features can override their method name
+            # To get actual plugin name, need to go through the inspection
+            # Then use plugin to find the name of its printable fields
+            try:
+                plugin = i.get_plugin(i.method)
+                if 'printFields' in dir(plugin):
+                    featureKeys[i.name] = plugin.printFields()
+                    # Always make sure the featuretype field is listed
+                    featureKeys[i.name].append('featuretype')
+                    print 'FOUND for ' + str(plugin)
+                else:
+                    featureKeys[i.name] = ['featuretype', 'featuredata']
+                    print 'NOT FOUND'
+            except ValueError:
+                print 'NO PLUGIN'
+                log.info('No plugin found for %s, using default fields' % i.method)
+                featureKeys[i.name] = ['featuretype', 'featuredata']
                 
-            # Becuase of manual measurements, need to look at frame results to figure out if numeric or string fields in place
-            for result in frame.results:
-                if result['measurement_name'] not in resultKeys:
-                    m = Measurement.objects(id=result.measurement_id)[0]
-                    # Have some manual measurements, which lack an actual plugin
-                    # Will have to ignore these for now, but log the issue                    
-                    try:
-                        plugin = m.get_plugin(m.method)
-                        if 'printFields' in dir(plugin):
-                            resultKeys[m.name] = plugin.printFields()
-                        else:
-                            resultKeys[m.name] = ['measurement_name', 'measurement_id', 'inspection_id']
-                            if 'string' in result: resultKeys[m.name].append('string')
-                            if 'numeric' in result: resultKeys[m.name].append('numeric')                                
-                    except ValueError:
-                        log.info('No plugin found for %s, using default fields' % m.method)
-                        resultKeys[m.name] = ['measurement_name', 'measurement_id', 'inspection_id']
-                        if 'string' in result: resultKeys[m.name].append('string')
-                        if 'numeric' in result: resultKeys[m.name].append('numeric')
-            
+        # Becuase of manual measurements, need to look at frame results to figure out if numeric or string fields in place
+        for m in Measurement.objects:
+            # Have some manual measurements, which lack an actual plugin
+            # Will have to ignore these for now, but log the issue                    
+            try:
+                plugin = m.get_plugin(m.method)
+                if 'printFields' in dir(plugin):
+                    resultKeys[m.name] = plugin.printFields()
+                    resultKeys[m.name].append('measurement_name')
+                else:
+                    resultKeys[m.name] = ['measurement_name', 'measurement_id', 'inspection_id', 'string', 'numeric']
+            except ValueError:
+                log.info('No plugin found for %s, using default fields' % m.method)
+                resultKeys[m.name] = ['measurement_name', 'measurement_id', 'inspection_id', 'string', 'numeric']
+        
+        
         return featureKeys, resultKeys
         
 
@@ -537,6 +524,8 @@ class Filter():
             
             # Grab the fields from the frame itself
             for key in self.fieldNames:
+                if key == '_id' and 'id' in frame:
+                    key = 'id'
                 tmpFrame[key] = frame[key]
             
             # Fields from the features

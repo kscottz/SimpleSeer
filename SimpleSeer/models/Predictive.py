@@ -48,7 +48,6 @@ class Predictive(SimpleDoc, mongoengine.Document):
         
         return model.betas.values
         
-        
     def execute(self, frame):
         
         tally = 0
@@ -57,10 +56,22 @@ class Predictive(SimpleDoc, mongoengine.Document):
             
         return tally
     
-    
     def update(self):
         
         inds, deps = self.getData()
         inds = self.transformData(inds)
         self.betas = self.estimate(deps, inds)
         self.save()
+
+    def partial(self, deps, inds, partial):
+        from numpy import dot, linalg
+        
+        tmp = {}
+        for var in inds:
+            if var != partial: temp[var] = inds[var]
+            
+        sInds = pd.DataFrame({var:df[var] for var in self.independent})
+        model1 = pd.ols(y = deps, x = sInds)
+        model2 = pd.ols(y = inds[partial], x = sInds)
+        
+        return model1.resid, model2.resid

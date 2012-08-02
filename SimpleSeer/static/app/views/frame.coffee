@@ -9,7 +9,7 @@ module.exports = class FrameView extends SubView
 
   initialize: ()=>
     super()
-    application.socket.on "message:capture/", @capturedNewFrame
+    #application.socket.on "message:capture/", @capturedNewFrame
 
   getRenderData: => application.settings
 

@@ -138,6 +138,7 @@ def getFrames(filter_params):
 	
 	retVal = dict(frames=frames, total_frames=total_frames)
 	
+	print 'about to return'
 	if retVal:
 		return retVal
 	else:
@@ -507,12 +508,12 @@ def chart(chart_name):
     
     return c.createChart()
 
-@route('chart/data/<chart_name>/<filter_params>', methods=['GET'])
+@route('/chart/data/<chart_name>/<filter_params>', methods=['GET'])
 def chart_data(chart_name, filter_params):
 	c = M.Chart.objects.get(name=chart_name)
 	return c.chartData(filter_params)
 
-@route('chart/meta/<chart_name>/', methods=['GET'])
+@route('/chart/meta/<chart_name>/', methods=['GET'])
 def chart_meta(chart_name):
 	c = M.Chart.objects.get(name=chart_name)
 	return c.chartMeta()
