@@ -186,12 +186,16 @@ p.frame_icons{
 
   #frameHolder {
     position: fixed;
-    top: 48px;
+    top: 0;
     left: 0;
     width: 100%;
+    height: 100%;
+    padding-top: 48px;
     box-sizing: border-box !important;
     -moz-box-sizing: border-box;
     padding-left: 300px;
+
+    #display-zoom {cursor: move;}
   }
 }
 
@@ -691,9 +695,8 @@ a.video{
   float:left;
 }
 #views-tabs-linkbar{
-  float:right;
   font-size:#0090D6;
-  padding:10px 25px;
+  padding:12px 0 0 2px;
 }
 #views-tabs-linkbar a{
   color:#0090D6;
@@ -902,11 +905,9 @@ a.video{
 }
 
 .ivi-right p.item-detail{
+  margin-bottom:0;
   float:left;
   height: 21px;
-}
-.ivi-right .tableSpacerListView p.item-detail{
-  width:180px;
 }
 .ivi-right .tableSpacerListView p.item-detail span{
   display:none;
@@ -916,6 +917,11 @@ a.video{
   span { color: #000; }
 }
 
+.ivi-right .tableSpacerListView p.item-detail-value{
+  text-align: right;
+  margin-right:40px;
+  span { color: #000; }
+}
 .ivi-left .btn {
   padding: 4px 12px;
 }
@@ -1000,8 +1006,16 @@ table.tablesorter tfooter tr th {
   border: 1px solid #ddd !important;
 }
 
+table.tablesorter thead tr .header {
+  padding-right: 18px;
+}
+
 table.tablesorter tbody tr.odd td {
     background-color: #fafafa !important;
+}
+
+div.data-view-item {
+    overflow-x: scroll;
 }
 
 #viewStage {
@@ -1016,6 +1030,7 @@ table.tablesorter tbody tr.odd td {
     position: fixed;
     margin: 0;
     top: 48px !important;
+    
   }
 
   #displayimage {
