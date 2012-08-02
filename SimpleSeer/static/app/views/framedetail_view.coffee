@@ -17,7 +17,6 @@ module.exports = class FrameDetailView extends View
     'click .clickEdit'  : 'switchStaticMeta'
     'blur .clickEdit'  : 'switchInputMeta'
     'change .notes-field' : 'updateNotes'
-    'resize window': 'updateScale'
     'dblclick #display-zoom': 'clickZoom'
 
   togglePro: =>
@@ -147,11 +146,22 @@ module.exports = class FrameDetailView extends View
     scale
 
   updateScale: =>
+    viewPort = $('#display-zoom')
     scale = @calculateScale()
     if scale is $("#zoomer").data("orig-scale")
       return
 
     fullHeight = $(window).height() - 48
+    
+    ui = {zoom: $("#zoomer").data("last-zoom")}
+    
+    viewPort.css({
+      'position': 'relative',
+      'width': (@.model.attributes.width * ui.zoom)+'px',
+      'height': (@.model.attributes.height * ui.zoom)+'px',
+    });
+    
+    $('#display').css("height", (@.model.attributes.height * scale))    
       
     $("#zoomer").data("orig-scale", scale)
     $("#zoomer").zoomify("option", {
@@ -162,6 +172,9 @@ module.exports = class FrameDetailView extends View
     })
   
   postRender: =>
+    $(window).resize =>
+      @updateScale()
+      
     @addMetaBox()
     scale = @calculateScale()
 
