@@ -1,9 +1,12 @@
 {
-"cameras": [ 
-    { "id": 0,  "name": "Default Camera" } 
+"cameras": [
+    { "id": 0,  "name": "Default Camera" }
 ],
 
-"web": { "address": "localhost:8080" },
+"web": {
+    "address": "localhost:8080",
+    "static": ${static}
+ },
 
 "mongo": { "host" : "127.0.0.1", "port": 27017 },
 "database": "default",
