@@ -184,7 +184,7 @@ module.exports = class FramelistView extends View
       @hideImageExpanded()
       @lastModel = ""
       return
-      
+
     element.find(".image-view-item").addClass("currentExpanded");
     
     thumbnail = element.find(".thumb")

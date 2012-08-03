@@ -7,6 +7,8 @@ module.exports = class FramelistFrameView extends View
   
   initialize: (frame)=>
     super()
+    if !frame.model.attributes.metadata
+      frame.model.attributes.metadata = {}
     for k in application.settings.ui_metadata_keys
       if !frame.model.attributes.metadata[k]?
         frame.model.attributes.metadata[k] = ''
@@ -27,10 +29,10 @@ module.exports = class FramelistFrameView extends View
   expandImage: =>
     application.framelistView.showImageExpanded @$el, @frame, @model
     @$el.find('.featureLabel').show()
-    
+  
   hideImage: =>
     @$el.find('.featureLabel').hide()
-
+  
   showSaved: =>
     @$el.find('.savebtn').show()
     
