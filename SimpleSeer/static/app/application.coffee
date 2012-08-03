@@ -1,13 +1,14 @@
 # The application bootstrapper.
 Application =
-  initialize: ->
+  initialize: (appName) ->
+    @appName = appName
     if @settings.mongo.is_slave
       $(".notebook").hide()
     if !@settings.template_paths?
       @settings.template_paths = {}
     ViewHelper = require 'lib/view_helper'
     HomeView = require 'views/home_view'
-    FramelistView = require 'views/framelist_view'
+    #FramelistView = require 'views/framelist_view'
     FrameDetailView = require 'views/framedetail_view'
     #FrameSetView = require 'views/frameset_view'
     Router = require 'lib/router'
@@ -17,9 +18,12 @@ Application =
     OLAPs = require 'collections/OLAPs'
     FrameSets = require 'collections/framesets'
     Pallette = require 'lib/ui_helper'
+    Frame = require "../models/frame"
+    TabContainer = require "views/tabcontainer_view"
     @pallette = new Pallette()
     @subscriptions = {}
     @timeOffset = (new Date()).getTimezoneOffset() * 60 * 1000
+    @filters = require 'views/filters/init'
 
     if !@.isMobile
       @.socket = io.connect '/rt'
@@ -43,11 +47,12 @@ Application =
     @measurements.fetch()
     @frames = new Frames()
     @framesets = new FrameSets()
+    @framelistView = new TabContainer({model:Frame,tabs:'tabs'})
 
     #@lastframes = new Frames()
 
     @homeView = new HomeView()
-    @framelistView = new FramelistView()
+    #@framelistView = new FramelistView()
 
     # set up the client name
     $('#client-name').html Application.settings.ui_pagename || ""
@@ -68,11 +73,28 @@ Application =
   _serveralert: (msg) ->
     Application.alert(msg['data']['message'], msg['data']['severity'])
 
-  getFilter: (name) ->
-    if !@ui?
-      @ui = {}
-      @ui.filters = require 'views/filters/init'
-    return @ui.filters[name]
+  isLoading: =>
+    !$('#loadThrob :hidden').length
+    
+  throbber:
+    _cb:[]
+    load: (message,cb=[]) ->
+      $('#loadThrob').modal "show"
+      for o in cb
+        @callback(o)
+      return
+    clear: ->
+      $('#loadThrob').modal "hide"
+      for o in @_cb
+        o()
+      @_cb = []
+      return
+    callback: (cb) ->
+      if Application.isLoading()
+        cb()
+      else
+        @_cb.push cb
+      return
 
   alert: (message, alert_type) ->
     _anchor = @settings.ui_alert_anchor || '#messages'

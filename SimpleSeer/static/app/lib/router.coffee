@@ -1,8 +1,9 @@
 require 'lib/slide_replace'
 application = require 'application'
 Frame = require "../models/frame"
-FrameDetailView = require 'views/framedetail_view'
-FramelistView = require 'views/framelist_view'
+FrameDetailView = require "views/framedetail_view"
+#FramelistView = require "views/framelist_view"
+TabContainer = require "views/tabcontainer_view"
 
 module.exports = class Router extends Backbone.Router
   routes: application.settings['ui_routes'] || {}
@@ -26,7 +27,8 @@ module.exports = class Router extends Backbone.Router
         
   framelist: ->
     #application.framelistView.reset()
-    application.framelistView = new FramelistView()
+    #application.framelistView = new TabContainer({model:Frame})
+    #console.log application.framelistView
     #application.lastframes.fetch_filtered
     #$('ul.nav').find(".active").removeClass("active")
     #$('ul.nav').find('li.frames').addClass('active')

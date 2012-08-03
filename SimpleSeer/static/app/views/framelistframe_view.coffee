@@ -4,6 +4,7 @@ application = require('application')
 
 module.exports = class FramelistFrameView extends View
   template: template
+  className:'image-view-item'
   
   initialize: (frame)=>
     super()

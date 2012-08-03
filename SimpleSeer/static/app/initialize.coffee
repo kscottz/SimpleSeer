@@ -5,6 +5,6 @@ $ ->
     _.templateSettings = {interpolate : /\{\{(.+?)\}\}/g}
 
     application.settings = data.settings
-    application.initialize()
+    application.initialize('SimpleSeer')
     Backbone.history.start()
-    window.SimpleSeer = application
+    window[application.appName] = application
