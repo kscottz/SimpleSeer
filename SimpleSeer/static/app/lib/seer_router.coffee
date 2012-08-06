@@ -5,7 +5,7 @@ FrameDetailView = require "views/framedetail_view"
 #FramelistView = require "views/framelist_view"
 TabContainer = require "views/tabcontainer_view"
 
-module.exports = class Router extends Backbone.Router
+module.exports = class SeerRouter extends Backbone.Router
   routes: application.settings['ui_routes'] || {}
 
   #for route, name of application.settings['ui_navurls']
@@ -24,7 +24,7 @@ module.exports = class Router extends Backbone.Router
         application.homeView.subviews.frameview.setVideoFeed()
         application.charts.onSuccess(d1, d2)
         application.homeView.postRender()
-        
+
   framelist: ->
     #application.framelistView.reset()
     #application.framelistView = new TabContainer({model:Frame})
@@ -36,14 +36,14 @@ module.exports = class Router extends Backbone.Router
     #$('#main').slideReplace application.framelistView.initialize()
     #$('#main').html application.framelistView.render().el
     $('#main').slideReplace application.framelistView.render().el, 'right'
-            
-        
+
+
   frame: (id) ->
     frame_view = (f) ->
       fdv = new FrameDetailView({model: f})
       $('#main').slideReplace fdv.render().el, 'right'
       fdv.postRender()
-       
+
     #f = application.lastframes.get(id)
     if f
       frame_view f
