@@ -388,21 +388,16 @@ class Filter():
         return ret
         
     
-    def toCSV(self, frames):
+    def toCSV(self, rawdata):
         import StringIO
         import csv
         
         # csv libs assume saving to a file handle
         f = StringIO.StringIO()
         
-        frames = self.flattenFrame(frames)
-        
-        keys = self.keyNamesList()
-        
         # Convert the dict to csv
-        csvDict = csv.DictWriter(f, keys)
-        csvDict.writeheader()
-        csvDict.writerows(frames)
+        csvWriter = csv.writer(f)
+        csvWriter.writerows(rawdata)
         
         # Grab the string version of the output
         output = f.getvalue()
@@ -410,41 +405,22 @@ class Filter():
         
         return output
         
-    def toExcel(self, frames):
+    def toExcel(self, rawdata):
         import StringIO
         from xlwt import Workbook, XFStyle
         
         # Need a file handle to save to
         f = StringIO.StringIO()
         
-        frames = self.flattenFrame(frames)
-        
-        keys = self.keyNamesList()
-        
         # Construct a workbook with one sheet
         wb = Workbook()
-        s = wb.add_sheet('frames')
-        
-        # Create the style for date/time
-        dateStyle = XFStyle()
-        dateStyle.num_format_str = 'MM/DD/YYYY HH:MM:SS'
-        
-        # Add the header/field labels
-        r = s.row(0)
-        for i, name in enumerate(keys):
-            r.write(i, name)
+        s = wb.add_sheet('export')
         
         # Write the data
-        for i, frame in enumerate(frames):
-            for j, name in enumerate(keys):
-                try:
-                    if type(frame[name]) == datetime:
-                        s.write(i+1, j, frame[name], dateStyle)
-                    else:
-                        s.write(i+1, j, str(frame.get(name, 'N/A')))
-                except KeyError:
-                    pass_
-            
+        for i, data in enumerate(rawdata):
+            for j, val in enumerate(data):
+                s.write(i, j, val)
+                
         # Save the the string IO and grab the string data
         wb.save(f)
         output = f.getvalue()
