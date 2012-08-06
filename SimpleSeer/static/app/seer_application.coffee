@@ -38,7 +38,6 @@ module.exports = SeerApplication =
 	    #console.log 'Got message', msg
       @.socket.on "message:alert/", window.SimpleSeer._serveralert
       @.socket.emit 'subscribe', 'alert/'
-
     @inspections = new Inspections()
     @inspections.fetch()
     @charts = new OLAPs()

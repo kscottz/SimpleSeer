@@ -92,3 +92,4 @@ module.exports = class tableView extends SubView
     #console.log @$el.find('#csvlink').attr('href')
     #@$el.find('#excellink').attr('href','/downloadFrames/excel'+@exportUrl)
     return {header:retHeader,row:retRow,exportUrl:exportUrl}
+    
