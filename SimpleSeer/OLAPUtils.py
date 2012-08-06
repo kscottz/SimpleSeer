@@ -1,4 +1,5 @@
 from .models.OLAP import OLAP
+from .models.Chart import Chart
 from .models.Measurement import Measurement
 from .models.Inspection import Inspection
 
@@ -29,7 +30,7 @@ class OLAPFactory:
         # First, create the core OLAP
         originalOLAP = OLAP.objects(name = originalChart.olap)[0]
         o = self.fromFilter(filters, originalOLAP)
-        o.transient = True
+        o.transient = datetime.now()
         o.save()
         
         # Create the chart to point to it
@@ -171,65 +172,27 @@ class RealtimeOLAP():
     
     def realtime(self, frame):
         
-        conds = []
-        for res in frame.results:
-            conds.append({'queryType': 'measurement_id', 'queryId': res.measurement_id})
-        for feat in frame.features:
-            conds.append({'queryType':'inspection_id', 'queryId': feat.inspection})
+        charts = Chart.objects() 
         
-            
-        olaps = OLAP.objects(__raw__={'$or': conds}) 
+        print 'starting...'
         
-        print len(olaps)
-        
-        f = Filter()
-        flattened = f.flattenFrame([frame])
-        
-        for o in olaps:
+        for chart in charts:
             # If no statistics, send result on its way
             # If there are stats, it will be handled later by stats scheduler
-            if not o.statsInfo:
-                formatted = self.formatFrame(o, flattened)
-                dFrame = [v for v in formatted.transpose().to_dict().values()][0]
-                if len(dFrame):
-                    self.sendOLAP(dFrame, o)
-
-                 
-    def sendOLAP(self, data, o):
-        from .models.Chart import Chart
-        
-        if len(data) > 0:
-            # Need long term fix: only publish to charts that are listened to
-            cs = Chart.objects(olap = o.name)
-            
-            for c in cs:
-                thisData = data.copy()
-                chartData = c.mapData([thisData])
-                self.sendMessage(o, chartData, c.name)                     
-
-
-    def formatFrame(self, o, frame):
-        
-        sinceok = (not o.since) or (frame.capturetime > o.since)
-        beforeok = (not o.before) or (frame.capturetime < o.before)
-        
-        if sinceok and beforeok:
-            # Use only the specified fields
-            frame = pd.DataFrame(frame)
-            frame = o.doPostProc(frame)
-        
-        return frame
-
-
-    def sendMessage(self, o, data, subname):
+            olap = OLAP.objects(name=chart.olap)[0]
+            if not olap.statsInfo:
+                data = chart.chartData(realtime = True)
+                if data:
+                    self.sendMessage(chart, data)
+                
+    def sendMessage(self, chart, data):
         if (len(data) > 0):
             msgdata = dict(
-                olap = str(o.name),
+                chart = str(chart.name),
                 data = data)
         
-            print 'going to send' + str(msgdata)
-            olapName = 'Chart/%s/' % utf8convert(subname) 
-            ChannelManager().publish(olapName, dict(u='data', m=msgdata))
+            chartName = 'Chart/%s/' % utf8convert(chart.name) 
+            ChannelManager().publish(chartName, dict(u='data', m=msgdata))
             
 
 class ScheduledOLAP():
@@ -243,7 +206,7 @@ class ScheduledOLAP():
         glets.append(Greenlet(self.skedLoop, 'minute'))
         glets.append(Greenlet(self.skedLoop, 'hour'))
         glets.append(Greenlet(self.skedLoop, 'day'))
-    
+        
         # Start all the greenlets
         for g in glets:
             g.start()
@@ -251,8 +214,7 @@ class ScheduledOLAP():
         # Join all the greenlets
         for g in glets:
             g.join()
-        
-        
+                
     def skedLoop(self, interval):
         
         from datetime import datetime

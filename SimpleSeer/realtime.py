@@ -58,8 +58,8 @@ class ChannelManager(object):
         log.info('Unsubscribe to %s: %s', name, id(sub_sock))
         channel = self._channels.get(name, None)
         if channel is None: return
-        channel.pop(id(sub_sock), None)
         self.transientCharts(channel, name)
+        channel.pop(id(sub_sock), None)
         if not channel:
             self._channels.pop(name, None)
 

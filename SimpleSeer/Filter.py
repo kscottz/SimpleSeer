@@ -11,12 +11,17 @@ class Filter():
     
     fieldNames = ['_id', 'camera', 'capturetime', 'results', 'features', 'metadata']
     
-    def getFrames(self, allFilters, unit='frame', skip=0, limit=float("inf"), sortinfo = {}, statsInfo = {}, groupTime = '', valueMap = {}):
+    def getFrames(self, allFilters, realtime = 0, skip=0, limit=float("inf"), sortinfo = {}, statsInfo = {}, groupTime = '', valueMap = {}):
         
         pipeline = []
         frames = []
         measurements = []
         features = []
+        
+        # Only get one most recent result if realtime
+        if realtime:
+            pipeline.append({'$sort': {'capturetime': -1}})
+            pipeline.append({'$limit': 1})
         
         # Need to initially construct/modify a few fields for future filters
         pipeline += self.initialFields(groupTime, valueMap)
@@ -36,14 +41,14 @@ class Filter():
             pipeline += self.filterFrames(frames)
         
             
-        pipeline += self.filterMeasurements(measurements, unit)            
-        pipeline += self.filterFeatures(features, unit)
+        pipeline += self.filterMeasurements(measurements)            
+        pipeline += self.filterFeatures(features)
         
         # Sort the results
         pipeline += self.sort(sortinfo)
         
-        for p in pipeline:
-            print 'LINE: %s' % str(p)
+        #for p in pipeline:
+        #    print 'LINE: %s' % str(p)
         
         # This is all done through mongo aggregation framework
         db = Frame._get_db()
@@ -169,7 +174,7 @@ class Filter():
          
         return [{'$match': filters}]
     
-    def filterMeasurements(self, measQuery, unit):
+    def filterMeasurements(self, measQuery):
         # Do the basic pipeline construction for filtering on Measurements
         # (which appear in Frames under $results)
         # Always unwind to filter out unneded fields from results
@@ -198,7 +203,7 @@ class Filter():
         return parts
     
     
-    def filterFeatures(self, featQuery, unit):
+    def filterFeatures(self, featQuery):
         # Do the basic pipeline construction for filtering on features
         
         parts = []
@@ -470,12 +475,9 @@ class Filter():
                     featureKeys[i.name] = plugin.printFields()
                     # Always make sure the featuretype field is listed
                     featureKeys[i.name].append('featuretype')
-                    print 'FOUND for ' + str(plugin)
                 else:
                     featureKeys[i.name] = ['featuretype', 'featuredata']
-                    print 'NOT FOUND'
             except ValueError:
-                print 'NO PLUGIN'
                 log.info('No plugin found for %s, using default fields' % i.method)
                 featureKeys[i.name] = ['featuretype', 'featuredata']
                 
