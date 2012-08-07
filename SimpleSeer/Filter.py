@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 
 class Filter():
     
-    fieldNames = ['_id', 'camera', 'capturetime', 'results', 'features', 'metadata']
+    fieldNames = ['_id', 'camera', 'capturetime', 'results', 'features', 'metadata', 'notes']
     
     def getFrames(self, allFilters, unit='frame', skip=0, limit=float("inf"), sortinfo = {}, statsInfo = {}, groupTime = '', valueMap = {}):
         
