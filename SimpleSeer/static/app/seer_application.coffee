@@ -18,7 +18,6 @@ module.exports = SeerApplication =
     FrameSets = require 'collections/framesets'
     Pallette = require 'lib/ui_helper'
     Frame = require "../models/frame"
-    TabContainer = require "views/tabcontainer_view"
     @pallette = new Pallette()
     @subscriptions = {}
     @timeOffset = (new Date()).getTimezoneOffset() * 60 * 1000
@@ -45,6 +44,7 @@ module.exports = SeerApplication =
     @measurements.fetch()
     @frames = new Frames()
     @framesets = new FrameSets()
+    TabContainer = require "views/tabcontainer_view"
     @framelistView = new TabContainer({model:Frame,tabs:'tabs'})
 
     #@lastframes = new Frames()

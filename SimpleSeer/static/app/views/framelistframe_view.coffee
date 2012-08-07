@@ -15,7 +15,6 @@ module.exports = class FramelistFrameView extends View
         frame.model.attributes.metadata[k] = ''
     @frame = frame.model
 
-  
   events:
     'click .action-viewFrame' : 'expandImage'
     'keypress .action-viewFrame' : 'expandImage'
@@ -77,7 +76,7 @@ module.exports = class FramelistFrameView extends View
       metadata[$(span).html()] = input.attr('value')
     
     #@addMetaBox(self)
-    @model.save {metadata: metadata}
+    @model.save {metadata: metadata,notes:$(".notes-field").attr('value')}
     @setSaved()
 
   updateNotes: (e) =>
