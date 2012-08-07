@@ -68,9 +68,9 @@ class SimpleSeerProjectTemplate(Template):
             tgt_brunch / 'vendor/stylesheets/seer.css')
 
         # Link the app
-        with tgt_brunch:
-            print subprocess.check_output(
-                ['npm', 'link'])
+        #with tgt_brunch:
+        #    print subprocess.check_output(
+        #        ['npm', 'link'])
 
         # Ensure that brunch build has been run in the target
         with tgt_brunch:
