@@ -97,23 +97,6 @@ ul {
   padding: 0px;
 }
 
-#markupImageTarget{
-  position: relative;
-  overflow: hidden;
-}
-#markupImageTarget img {
-    width: 100%;
-    max-width: none;
-}
-#markupImageTarget canvas {
-    position: absolute;
-    top: 0px;
-    left: 0px;
-    width: 100%;
-    height: 100%;
-}
-
-
 .brand {
   margin-top: 2px;
 }
@@ -813,6 +796,7 @@ a.video{
   width:100%;
 }
 .image-view-item{
+		box-sizing: border-box;
   border-top: 1px solid #E0DEDE;
   padding:15px;
   font-weight:bold;
@@ -1022,7 +1006,7 @@ div.data-view-item {
   margin: 0;
   z-index: 1020;
   width: 300px;
-  top: 110px;
+  top: 63px;
 
   &.fixit {
     position: fixed;
@@ -1031,7 +1015,7 @@ div.data-view-item {
     
   }
 
-  #displayimage {
+  img {
     position: absolute;
     top: 0;
     left: 0;
@@ -1040,7 +1024,7 @@ div.data-view-item {
     border-width: 25px 20px 9999px;
   }
 
-  #displaycanvas {
+  canvas {
     position: absolute;
     top: 0;
     left: 0;
