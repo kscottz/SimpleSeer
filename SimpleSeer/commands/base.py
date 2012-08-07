@@ -3,6 +3,8 @@ import threading
 
 import gevent
 import guppy
+import os.path
+import warnings
 
 class Command(object):
     'A simpleseer subcommand'
@@ -39,7 +41,11 @@ class Command(object):
         import logging
         import logging.config
         if self.options.logging:
-            logging.config.fileConfig(self.options.logging)
+            if os.path.exists(self.options.logging):
+                logging.config.fileConfig(self.options.logging)
+            else:
+                warnings.warn("Could not find logging configuration %s, defaulting to basic config" % self.options.logging)
+                logging.basicConfig()
         else:
             logging.basicConfig()
         self.log = logging.getLogger(__name__)
