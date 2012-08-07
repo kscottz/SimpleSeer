@@ -1,8 +1,9 @@
 require 'lib/slide_replace'
 application = require 'application'
-Frame = require "../models/frame"
-FrameDetailView = require 'views/framedetail_view'
-FramelistView = require 'views/framelist_view'
+#Frame = require "../models/frame"
+#FrameDetailView = require "views/framedetail_view"
+#FramelistView = require "views/framelist_view"
+TabContainer = require "views/tabcontainer_view"
 
 module.exports = class SeerRouter extends Backbone.Router
   routes: application.settings['ui_routes'] || {}
@@ -13,40 +14,4 @@ module.exports = class SeerRouter extends Backbone.Router
     #$('.nav').append '<li class="notebook"><a href=\'javascript: window.open(window.location.protocol + "//" + window.location.hostname + ":5050");\'>Develop</a></li>'
 
   home: ->
-    application.charts.fetch
-      success: (d1, d2) ->
-        if application.settings['ui_enablesubnav']? and not application.settings['ui_enablesubnav']
-          $('.subnav').hide()
-        $('ul.nav').find(".active").removeClass("active")
-        $('ul.nav').find('li.charts').addClass('active')
-        $('#main').slideReplace application.homeView.render().el, 'left'
-        application.homeView.subviews.frameview.setVideoFeed()
-        application.charts.onSuccess(d1, d2)
-        application.homeView.postRender()
-
-  framelist: ->
-    #application.framelistView.reset()
-    application.framelistView = new FramelistView()
-    #application.lastframes.fetch_filtered
-    #$('ul.nav').find(".active").removeClass("active")
-    #$('ul.nav').find('li.frames').addClass('active')
-    #$('#main').html application.framelistView.render().el
-    #$('#main').slideReplace application.framelistView.initialize()
-    #$('#main').html application.framelistView.render().el
-    $('#main').slideReplace application.framelistView.render().el, 'right'
-
-
-  frame: (id) ->
-    frame_view = (f) ->
-      fdv = new FrameDetailView({model: f})
-      $('#main').slideReplace fdv.render().el, 'right'
-      fdv.postRender()
-
-    #f = application.lastframes.get(id)
-    if f
-      frame_view f
-    else
-      f = new Frame {id: id}
-      f.fetch
-        success: ->
-          frame_view f
+    return ""

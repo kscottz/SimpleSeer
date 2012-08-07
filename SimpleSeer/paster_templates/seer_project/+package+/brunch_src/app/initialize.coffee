@@ -6,5 +6,5 @@ $ ->
 
     window.SimpleSeer = application
     application.settings = data.settings
-    application.initialize()
+    application.initialize('SimpleSeer')
     Backbone.history.start()
