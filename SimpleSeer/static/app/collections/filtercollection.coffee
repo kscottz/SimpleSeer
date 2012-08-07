@@ -25,12 +25,18 @@ module.exports = class FilterCollection extends Collection
       @view = params.view
     #todo: map filter sets to view type
     for o in application.settings.ui_filters_framemetadata
-      @filters.push @view.addSubview o.field_name, application.getFilter(o.format), '#filter_form', {params:o,collection:@}
+      @filters.push @view.addSubview o.field_name, @getFilter(o.format), '#filter_form', {params:o,collection:@}
     @
 
   #comparator: (chapter) =>
   #  return -chapter.get("capturetime")
   #  return chapter.get("capturetime")
+
+  getFilter: (name) ->
+    #if !@filters?
+    #  @filters = require '../views/filters/init'
+    #return @filters[name]
+    application.filters[name]
   
   sortList: (sorttype, sortkey, sortorder) =>
     for o in @filters

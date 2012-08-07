@@ -7,7 +7,7 @@ module.exports = SeerApplication =
       @settings.template_paths = {}
     ViewHelper = require 'lib/view_helper'
     HomeView = require 'views/home_view'
-    FramelistView = require 'views/framelist_view'
+    #FramelistView = require 'views/framelist_view'
     FrameDetailView = require 'views/framedetail_view'
     #FrameSetView = require 'views/frameset_view'
     Router = require 'lib/router'
@@ -17,9 +17,12 @@ module.exports = SeerApplication =
     OLAPs = require 'collections/OLAPs'
     FrameSets = require 'collections/framesets'
     Pallette = require 'lib/ui_helper'
+    Frame = require "../models/frame"
+    TabContainer = require "views/tabcontainer_view"
     @pallette = new Pallette()
     @subscriptions = {}
     @timeOffset = (new Date()).getTimezoneOffset() * 60 * 1000
+    @filters = require 'views/filters/init'
 
     if !@.isMobile
       @.socket = io.connect '/rt'
@@ -35,7 +38,6 @@ module.exports = SeerApplication =
 	    #console.log 'Got message', msg
       @.socket.on "message:alert/", window.SimpleSeer._serveralert
       @.socket.emit 'subscribe', 'alert/'
-
     @inspections = new Inspections()
     @inspections.fetch()
     @charts = new OLAPs()
@@ -43,11 +45,12 @@ module.exports = SeerApplication =
     @measurements.fetch()
     @frames = new Frames()
     @framesets = new FrameSets()
+    @framelistView = new TabContainer({model:Frame,tabs:'tabs'})
 
     #@lastframes = new Frames()
 
     @homeView = new HomeView()
-    @framelistView = new FramelistView()
+    #@framelistView = new FramelistView()
 
     # set up the client name
     $('#client-name').html window.SimpleSeer.settings.ui_pagename || ""
@@ -68,11 +71,28 @@ module.exports = SeerApplication =
   _serveralert: (msg) ->
     window.SimpleSeer.alert(msg['data']['message'], msg['data']['severity'])
 
-  getFilter: (name) ->
-    if !@ui?
-      @ui = {}
-      @ui.filters = require 'views/filters/init'
-    return @ui.filters[name]
+  isLoading: =>
+    !$('#loadThrob :hidden').length
+    
+  throbber:
+    _cb:[]
+    load: (message,cb=[]) ->
+      $('#loadThrob').modal "show"
+      for o in cb
+        @callback(o)
+      return
+    clear: ->
+      $('#loadThrob').modal "hide"
+      for o in @_cb
+        o()
+      @_cb = []
+      return
+    callback: (cb) ->
+      if Application.isLoading()
+        cb()
+      else
+        @_cb.push cb
+      return
 
   alert: (message, alert_type) ->
     _anchor = @settings.ui_alert_anchor || '#messages'

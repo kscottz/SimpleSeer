@@ -184,7 +184,7 @@ module.exports = class FramelistView extends View
       @hideImageExpanded()
       @lastModel = ""
       return
-      
+
     element.find(".image-view-item").addClass("currentExpanded");
     
     thumbnail = element.find(".thumb")
@@ -260,7 +260,6 @@ module.exports = class FramelistView extends View
       out.push({'label':o.options.params.label,'name':o.options.params.field_name,'type':o.options.params.type})
     return out
       
-
   addObj: (d)=>
     an = @$el.find('#frame_holder')
     @$el.find('#count_viewing').html @filtercollection.length
