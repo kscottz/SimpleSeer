@@ -59,7 +59,8 @@ class OLAP(SimpleDoc, mongoengine.Document):
     olapFilter = mongoengine.ListField()
     statsInfo = mongoengine.ListField()
     notNull = mongoengine.IntField()
-    transient = mongoengine.DateTimeField()
+    transient = mongoengine.BooleanField()
+    confirmed = mongoengine.BooleanField()
     
     meta = {
         'indexes': ['name']

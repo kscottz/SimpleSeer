@@ -30,7 +30,8 @@ class OLAPFactory:
         # First, create the core OLAP
         originalOLAP = OLAP.objects(name = originalChart.olap)[0]
         o = self.fromFilter(filters, originalOLAP)
-        o.transient = datetime.now()
+        o.transient = 1
+        o.confirmed = 1
         o.save()
         
         # Create the chart to point to it
@@ -42,32 +43,19 @@ class OLAPFactory:
         c.olap = o.name
         c.save()
     
-    def removeTransient(self, chartName):
+    @classmethod
+    def removeTransient(self, olap):
         from .models.Chart import Chart
         
-        cs = Chart.objects(name = chartName)
-        if cs:
-            c = cs[0]
-        else:
-            log.warn('Asked to cleanup %s, but it does not exist' % chartName)
-            return
-            
-        os = OLAP.objects(name = c.olap)
-        if os:
-            o = os[0]
-        else:
-            log.warn('No OLAPs associated with %s' % chartName)
-            return
-            
-        if o.transient:
-            log.info('Deleting transient OLAP: %s' % o.name)
-            o.delete()
-            log.info('Deleting associated chart: %s' % c.name)
+        if olap.transient:
+            c = Chart.objects(olap=olap.name)[0]
             c.delete()
+            o.delete()
+            log.info('Deleted transient OLAP: %s' % o.name)
+            log.info('Deleted associated chart: %s' % c.name)
+        
         else:
-            log.info('Nobody listening to OLAP %s' % o.name)
-        
-        
+            log.info('%s is not transient' % olap.name)
         
     def fromFilter(self, filters, oldOLAP = None):
         
@@ -252,6 +240,7 @@ class RealtimeOLAP():
             return self.getFrameField(field.get(keyParts.pop(0), {}), keyParts) 
                 
     def sendMessage(self, chart, data):
+        
         if (len(data) > 0):
             msgdata = dict(
                 chart = str(chart.name),
@@ -273,6 +262,8 @@ class ScheduledOLAP():
         glets.append(Greenlet(self.skedLoop, 'hour'))
         glets.append(Greenlet(self.skedLoop, 'day'))
         
+        glets.append(Greenlet(self.checkTransient))
+        
         # Start all the greenlets
         for g in glets:
             g.start()
@@ -280,7 +271,30 @@ class ScheduledOLAP():
         # Join all the greenlets
         for g in glets:
             g.join()
+    
+    
+    def checkTransient(self):
+        import OLAPFactory
+        from SimpleSeer.realtime import ChannelManager
+        
+        while True:
+            # First delete transients that are inactive
+            olds = OLAP.objects(transient = True, confirmed = False)
+            for o in olds:
+                OLAPFactory.removeTransient(o)
                 
+            # Request updates on status of active olaps
+            active = OLAP.objects(transient = True)
+            for a in active:
+                # Set status to inactive until a client responds that it is in use
+                a.confirmed = False
+                
+                # Publish a request that any listening clients confirm they are listening
+                c = Chart.objects(name=a.name)[0]
+                ChannelManager().publish(c.name, dict(u='data', m='ping')
+            
+            sleep(3600)
+            
     def skedLoop(self, interval):
         
         from datetime import datetime

@@ -473,13 +473,14 @@ class Filter():
                 plugin = i.get_plugin(i.method)
                 if 'printFields' in dir(plugin):
                     featureKeys[i.name] = plugin.printFields()
-                    # Always make sure the featuretype field is listed
+                    # Always make sure the featuretype and inspection fields listed for other queries
                     featureKeys[i.name].append('featuretype')
+                    featureKeys[i.name].append('inspection')
                 else:
-                    featureKeys[i.name] = ['featuretype', 'featuredata']
+                    featureKeys[i.name] = ['featuretype', 'inspection', 'featuredata']
             except ValueError:
                 log.info('No plugin found for %s, using default fields' % i.method)
-                featureKeys[i.name] = ['featuretype', 'featuredata']
+                featureKeys[i.name] = ['featuretype', 'inspection', 'featuredata']
                 
         # Becuase of manual measurements, need to look at frame results to figure out if numeric or string fields in place
         for m in Measurement.objects:
@@ -532,6 +533,17 @@ class Filter():
         
         return frame
     
+    def getField(self, field, keyParts):
+        # This function recursively pulls apart the key parts to unpack the hashes and find the actual value
+                
+        if len(keyParts) == 1:
+            return field.get(keyParts[0], None)
+        else:
+            return self.getField(field.get(keyParts.pop(0), {}), keyParts) 
+    
+    def inspectionIdToName(self, inspId):
+        return Inspection.objects(id=inspId)[0].name
+    
     def flattenFrame(self, frames):
         
         featureKeys, resultKeys = self.keyNamesHash()
@@ -544,25 +556,28 @@ class Filter():
             for key in self.fieldNames:
                 if key == '_id' and 'id' in frame:
                     key = 'id'
-                tmpFrame[key] = frame[key]
-            
+                
+                keyParts = key.split('.')
+                tmpFrame[key] = self.getField(frame, keyParts)
+                
             # Fields from the features
             for feature in frame['features']:
                 # If this feature has items that need to be saved
-                if feature['featuretype'] in featureKeys.keys():
+                inspection_name = self.inspectionIdToName(feature['inspection']) 
+                if  inspection_name in featureKeys.keys():
                     # Pull up the relevant keys, named featuretype.field
-                    for field in featureKeys[feature['featuretype']]:
-                        tmpFrame[feature['featuretype'] + '.' + field] = feature[field]
+                    for field in featureKeys[inspection_name]:
+                        keyParts = field.split('.')
+                        tmpFrame[feature['featuretype'] + '.' + field] = self.getField(feature, keyParts)
              
             # Fields from the results
             for result in frame['results']:
                 # If this result has items that need to be saved
                 if result['measurement_name'] in resultKeys.keys():
                     for field in resultKeys[result['measurement_name']]:
-                        tmpFrame[result['measurement_name'] + '.' + field] = result[field]
+                        keyParts = field.split('.')
+                        tmpFrame[result['measurement_name'] + '.' + field] = self.getField(result, keyParts)
                             
             flatFrames.append(tmpFrame)
             
         return flatFrames
-	
-		
