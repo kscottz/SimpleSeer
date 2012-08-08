@@ -68,11 +68,8 @@ setup_environment() {
   echo "linking for development"
   sudo python setup.py develop
   echo "setting up environment"
-  sudo mkdir /etc/simpleseer
-  sudo ln -s `pwd`/SimpleSeer/static/ /etc/simpleseer/static
   sudo ln -s `pwd`/etc/supervisor.conf /etc/supervisor/conf.d/supervisor.conf
-  sudo ln -s `pwd`/etc/simpleseer.cfg /etc/simpleseer.cfg
-  sudo ln -s `pwd`/etc/simpleseer-logging.cfg /etc/simpleseer-logging.cfg
+  echo "make sure to symlink your project to /etc/simpleseer or run simpleseer deploy!"
 }
 
 setup_supervisor() {
@@ -83,30 +80,6 @@ setup_supervisor() {
   sudo supervisord
 }
 
-start_seer() {
-  reset
-  echo "Starting all SimpleSeer services"
-  sudo supervisorctl start subsystem:mongodb
-  echo "starting mongo..."
-  sleep 5
-  echo "starting pyro..."
-  sudo supervisorctl start subsystem:pyro4
-  sleep 5
-  echo "starting broker..."
-  sudo supervisorctl start subsystem:broker
-  sleep 5
-  echo "starting core..."
-  sudo supervisorctl start seer:core
-  sleep 2
-  echo "starting scrub..."
-  sudo supervisorctl start seer:scrub
-  sleep 2
-  echo "starting web..."
-  sudo supervisorctl start seer:web
-  sleep 2
-  echo "Supervisor Status:"
-  sudo supervisorctl status
-}
 
 seer_remove () {
   reset
@@ -116,12 +89,9 @@ seer_remove () {
   sudo killall supervisord
   echo "cleaning up old files..."
   mongo_uninstall
-  sudo rm -f /usr/local/bin/simpleseer
-  sudo rm -rf /usr/local/lib/python2.7/dist-packages/SimpleSeer.egg-link
-  sudo rm -rf /etc/simpleseer
+  sudo pip uninstall simpleseer
+  sudo rm /etc/simpleseer
   sudo rm -f /etc/supervisor/conf.d/supervisor.conf
-  sudo rm -f /etc/simpleseer.cfg
-  sudo rm -f /etc/simpleseer-logging.cfg
   echo "...done deleting seer from system"
   echo ""
 }
@@ -131,14 +101,14 @@ mongo_install () {
   echo ""
   echo "setting up directories"
   mkdir -p /tmp/mongo
-  if [ ! -f /tmp/mongodb-linux-x86_64-2.1.1.tgz ];
+  if [ ! -f /tmp/mongodb-linux-x86_64-2.2.0-rc0.tgz ];
   then
     echo "downloading..."
-    wget http://fastdl.mongodb.org/linux/mongodb-linux-x86_64-2.1.1.tgz -O /tmp/mongodb-linux-x86_64-2.1.1.tgz
+    wget http://fastdl.mongodb.org/linux/mongodb-linux-x86_64-2.2.0-rc0.tgz -O /tmp/mongodb-linux-x86_64-2.2.0-rc0.tgz
   fi  
-  sudo tar zxvf /tmp/mongodb-linux-x86_64-2.1.1.tgz -C /tmp/mongo
+  sudo tar zxvf /tmp/mongodb-linux-x86_64-2.2.0-rc0.tgz -C /tmp/mongo
   echo "copying files...."
-  sudo cp /tmp/mongo/mongodb-linux-x86_64-2.1.1/bin/* /usr/local/bin/
+  sudo cp /tmp/mongo/mongodb-linux-x86_64-2.2.0-rc0/bin/* /usr/local/bin/
   sudo mkdir -p /var/lib/mongodb
   sudo mkdir -p /var/log/mongodb
   sudo cp `pwd`/etc/mongodb.conf /etc/
@@ -207,7 +177,6 @@ while true; do
     echo "[a]uto install"
     echo "[m]anual install"
     echo "[r]emove from system"
-    echo "[s]tart seer"
     echo "e[x]it"
     echo
     read -p "which option:" choice
@@ -215,7 +184,6 @@ while true; do
         [a]* ) seer_auto_install;;
         [m]* ) seer_manual_install;;
         [r]* ) seer_remove;;
-        [s]* ) start_seer;;
         [x]* ) echo "exiting...";break;;
         * ) echo "Please choose an option.";;
     esac
