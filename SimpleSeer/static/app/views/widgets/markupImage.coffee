@@ -7,42 +7,46 @@ module.exports = class markupImage extends SubView
   className:"widget-markupImage"
 
   initialize: =>
+    $("#viewStage .close").live "click", =>
+      $(".currentExpanded").removeClass("currentExpanded")
+      $("#viewStage").hide()
+    
+    $(window).scroll =>
+      if $(window).scrollTop() < 63
+        $("#viewStage")
+          .removeClass("fixit")
+          .css("left", $("#viewStage").data("left") + "px")
+      else
+        $("#viewStage")
+          .addClass("fixit")
+          .css("left", $("#viewStage").data("left") + 101 + "px")
   
   getRenderData: =>
     if @model
-      {imgfile:@model.id}
-  
-  afterRender: =>
-    @openUpExpanded()
+      {imgfile: "/grid/imgfile/"+@model.get("id")}
+    else
+      {imgfile: ""}
   
   openUpExpanded: () =>
-    #if @lastModel is model
-    #  @hideImageExpanded()
-    #  @lastModel = ""
-    #  return
+    if $($.find(".thumb")[0]).length is 0
+      ""
       
-    #$@el.find(".image-view-item").addClass("currentExpanded");
-    
-    #thumbnail = element.find(".thumb")
-    #offsetLeft = thumbnail.offset().left + thumbnail.width() + 37
-    #imgWidth = thumbnail.parents("#views").width() - offsetLeft + 61
-    
-    offsetLeft = 0
-    imgWidth = 600
-    @$el.find("img").attr("src", @model.get('imgfile'))
-    $("#viewStage").css({"left": offsetLeft + "px", "width": imgWidth + "px", "display": "block"}).removeClass("fixit");
-
-    framewidth = @model.get("width")
-    realwidth = imgWidth
-    scale = realwidth / framewidth   
-
-    @pjs = new Processing(@$el.find("canvas").get 0)
-    @pjs.background(0,0)
-    @pjs.size @$el.width(), @model.get("height") * scale
-    @pjs.scale scale
-    
-    $("#displaycanvas").height(@model.get("height") * scale)
-    console.log @model.get('features')
-    if @model.get('features') then @model.get('features').each (f) => f.render(@pjs)
-    #@viewIsScrolled()
-    #@lastModel = @model
+    application.framelistView.hideMenu =>
+      thumbnail = $($.find(".thumb")[0])
+      offsetLeft = thumbnail.offset().left + thumbnail.width() - 41
+      imgWidth = thumbnail.parents("#image_tab").width() - offsetLeft - 17
+  
+      framewidth = @model.get("width")
+      realwidth = imgWidth
+      scale = realwidth / framewidth
+      
+      $("#viewStage").css({"left": offsetLeft + "px", "width": imgWidth + "px", "display": "block"}).data("left", offsetLeft);
+      $("#viewStage.fixit").css("left", $("#viewStage").data("left") + 101 + "px")
+      
+      $("#markupImageTarget").css("height", (@model.get("height") * scale) + "px")
+      
+      @pjs = new Processing(@$el.find("canvas").get 0)
+      @pjs.background(0,0)
+      @pjs.size @$el.width(), @model.get("height") * scale
+      @pjs.scale scale
+      if @model.get('features') then @model.get('features').each (f) => f.render(@pjs)
