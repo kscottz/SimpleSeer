@@ -1076,14 +1076,23 @@ div.data-view-item {
     position: fixed;
     top: 0;
     width: 100%;
+    background: rgba(0,0,0,0.5);
 }
 #throbberBody{
-    height: 90px;
+    background: #fff;
+    -moz-border-radius: 7px;
+    -webkit-border-radius: 7px;
+    border-radius: 7px;
+    box-shadow: 0px 3px 15px rgba(0,0,0,.5);
+    
     left: 50%;
-    margin: -45px -250px;
+    margin: -47px -250px;
     position: fixed;
     top: 50%;
     width: 500px;
+    padding: 15px;
+    
+    .message { font-size: 20px; text-align: center; margin-top: 20px; }
 }
 
 .pushLeft { margin-left: 30px; }

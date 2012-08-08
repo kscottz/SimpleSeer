@@ -77,8 +77,9 @@ module.exports = SeerApplication =
     
   throbber:
     _cb:[]
-    load: (message,cb=[]) ->
+    load: (message='Loading...',cb=[]) ->
       $('#throbber').show()
+      $('#throbber .message').html(message)
       for o in cb
         @callback(o)
       return
