@@ -18,8 +18,5 @@ class CreateCommand(ManageCommand):
         from paste.script import command as pscmd
         pscmd.run(["create", "-t", "simpleseer", self.options.projectname])
     
+
     
-    
-#@ManageCommand.simple()
-#def CreateCommand(ManageCommand):
-#    print "hello world " + 
