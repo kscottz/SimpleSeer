@@ -104,8 +104,9 @@ module.exports = class FramelistFrameView extends View
     metadata = []
     for i in application.settings.ui_metadata_keys
       metadata.push {key:i,val:md[i]}
+    console.log @frame.get('capturetime')
     retVal =
-      capturetime: new moment(parseInt @frame.get('capturetime')+'000').format("M/D/YYYY h:mm a")
+      capturetime: new moment(parseInt @frame.get('capturetime')).format("M/D/YYYY h:mm a")
       camera: @frame.get('camera')
       imgfile: @frame.get('imgfile')
       thumbnail_file: @frame.get('thumbnail_file')
