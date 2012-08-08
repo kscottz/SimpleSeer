@@ -18,14 +18,15 @@ module.exports = class DateTimeFilterView extends _filter
     @
 
   afterRender: () =>
-    tf = @$el.find('input[name=time_from]').datetimepicker {timeFormat: "h:mm tt", onClose: @setValue, ampm:true}
-    tt = @$el.find('input[name=time_to]').datetimepicker {timeFormat: "h:mm tt", onClose: @setValue, ampm:true}
-    tf.datepicker( "setDate",  new Date(@options.params.constraints.min-application.timeOffset))
-    tt.datepicker( "setDate",  new Date(@options.params.constraints.max-application.timeOffset))
+    tf = @$el.find('input[name=time_from]').datetimerange {
+      startDate: new Date(@options.params.constraints.min-application.timeOffset),
+      endDate: new Date(@options.params.constraints.max-application.timeOffset),
+      onUpdate: @setValue
+    }
+    
     #console.log @options.params.constraints
     super()
 
-    
   #setValue ALWAYS expects a date in the local time
   setValue :(e,u) =>
     dt = new moment(e)

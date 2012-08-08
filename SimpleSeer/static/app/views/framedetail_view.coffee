@@ -1,6 +1,7 @@
 View = require './view'
 template = require './templates/framedetail'
 application = require('application')
+markupImage = require './widgets/markupImage'
 
 module.exports = class FrameDetailView extends View  
   template: template
@@ -51,25 +52,23 @@ module.exports = class FrameDetailView extends View
   zoom: (e, ui) ->
     scale = $("#zoomer").data("orig-scale")
     os = $('#display').offset()
-    viewPort = $('#display-zoom')
     
-    viewPort.css({
+    $('#display').css("height", (@.model.attributes.height * scale))
+    $('#display-zoom').css
       'position': 'relative',
       'top': '-'+(@.model.attributes.height * ui.zoom * ui.y)+'px',
       'left': '-'+(@.model.attributes.width * ui.zoom * ui.x)+'px',
       'width': (@.model.attributes.width * ui.zoom)+'px',
       'height': (@.model.attributes.height * ui.zoom)+'px',
-    });
-    $('#display').css("height", (@.model.attributes.height * scale))
-
-    i = (scale / ui.zoom)
-
+    
     if ui.zoom != Number($("#zoomer").data("last-zoom"))
-      @pjs = new Processing("displaycanvas")
-      @pjs.background(0,0)
-      @pjs.size $('#display-img').width(), $("#display-img").height()
-      @pjs.scale @calculateScale() / i
-      if @model.get('features').length then @model.get('features').each (f) => f.render(@pjs)
+      i = (scale / ui.zoom)
+      @imagePreview.setZoom i
+      #@pjs = new Processing("displaycanvas")
+      #@pjs.background(0,0)
+      #@pjs.size $('#display-img').width(), $("#display-img").height()
+      #@pjs.scale @calculateScale() / i
+      #if @model.get('features').length then @model.get('features').each (f) => f.render(@pjs)
     
     $("#zoomer").data("last-zoom", ui.zoom)
     
@@ -115,7 +114,6 @@ module.exports = class FrameDetailView extends View
       span = $(tds[0]).find('span')[0]
       metadata[$(span).html()] = input.attr('value')
     
-    #@addMetaBox(self)
     @model.save {metadata: metadata}
 
   updateNotes: (e) =>
@@ -130,12 +128,6 @@ module.exports = class FrameDetailView extends View
 
   switchInputMeta: (e) =>
     target = $(e.currentTarget).parent().parent()
-
-    #unless target.find("input").length is 0
-    #  target.find("td").each (id, obj) ->
-    #    $(obj).html $(obj).find("input").attr("value")
-
-    #@delBlankMeta(target)
     @updateMetaData(target)
 
   calculateScale: =>
@@ -149,7 +141,7 @@ module.exports = class FrameDetailView extends View
     viewPort = $('#display-zoom')
     scale = @calculateScale()
     if scale is $("#zoomer").data("orig-scale")
-      return
+      return()
 
     fullHeight = $(window).height() - 48
     
@@ -172,54 +164,42 @@ module.exports = class FrameDetailView extends View
     })
   
   postRender: =>
-    $(window).resize =>
-      @updateScale()
-      
+    application.throbber.clear()
+    $(window).resize => @updateScale()
     @addMetaBox()
+    
     scale = @calculateScale()
-
-    fullHeight = $(window).height() - 48;
-    $("#zoomer").zoomify({
-      image: @model.get('imgfile'),
-      y: 25,
-      height: (fullHeight / @model.get("height")) / scale,
-      min: (scale.toFixed(2)) * 100,
-      max: 400,
-      zoom: scale.toFixed(2),
-      update: (e, ui) =>
-        @zoom(e, ui)
-    }).data("orig-scale", scale)
-        
-    if not @model.get('features').length
-      return
+    scaleFixed = scale.toFixed(2)
+    displayHeight = $(window).height() - 48;
+    
+    @imagePreview =  @addSubview "display-zoom", markupImage, "#display-zoom"
+    @imagePreview.setModel @model
+    
+    $("#zoomer")
+      .data("orig-scale", scale)
+      .zoomify
+        y: 25
+        max: 400
+        min: scaleFixed * 100
+        zoom: scaleFixed
+        image: @model.get('imgfile')
+        height: (displayHeight / @model.get("height")) / scale
+        update: (e, ui) =>
+          @zoom(e, ui)
       
-    @$(".tablesorter").tablesorter()
-    @pjs = new Processing("displaycanvas")
-    @pjs.background(0,0)
-    @pjs.size $('#display-img').width(), @model.get("height") * scale
-    @pjs.scale scale
-    if @model.get('features').length then @model.get('features').each (f) => f.render(@pjs)
-
-    $("#display-zoom").draggable({
+    @$el.find(".notes-field").autogrow()
+    
+    $("#display-zoom").draggable
       drag: (e, ui) ->
         w0 = $("#frameHolder").width()
         h0 = $("#frameHolder").height()
         w = $("#display-zoom").width()
         h = $("#display-zoom").height()
         
-        if ui.position.left > 0
-          ui.position.left = 0
-          
-        if ui.position.top > 0
-          ui.position.top = 0
-          
-        if -1*ui.position.left + w0 > w
-          ui.position.left = w0 - w
-          
-        if -1*ui.position.top + h0 > h
-          ui.position.top = h0 - h
+        if ui.position.left > 0 then ui.position.left = 0
+        if ui.position.top > 0 then ui.position.top = 0
+        if -1*ui.position.left + w0 > w then ui.position.left = w0 - w
+        if -1*ui.position.top + h0 > h then ui.position.top = h0 - h
 
-        $("#zoomer").zoomify("option", {"x": -1*ui.position.left / w, "y": -1*ui.position.top / h})
-    });
+       # $("#zoomer").zoomify("option", {"x": -1*ui.position.left / w, "y": -1*ui.position.top / h})
     
-    @$el.find(".notes-field").autogrow();
