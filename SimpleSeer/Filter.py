@@ -515,7 +515,23 @@ class Filter():
             
         return fieldNames
         
+    
+    @classmethod
+    def unEmbed(self, frame):
+        feats = frame['features']
+        newFeats = []
+        for f in feats:
+            newFeats.append(f.__dict__['_data'])
+        frame['features'] = newFeats
         
+        results = frame['results']
+        newRes = []
+        for r in results:
+            newRes.append(r.__dict__['_data'])
+        frame['results'] = newRes
+        
+        return frame
+    
     def flattenFrame(self, frames):
         
         featureKeys, resultKeys = self.keyNamesHash()

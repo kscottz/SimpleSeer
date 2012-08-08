@@ -172,18 +172,84 @@ class RealtimeOLAP():
     
     def realtime(self, frame):
         
-        charts = Chart.objects() 
+        charts = Chart.objects()
         
-        print 'starting...'
+        # Functions below assume frame is a dict not an object 
+        frame = frame.__dict__['_data']
         
         for chart in charts:
             # If no statistics, send result on its way
             # If there are stats, it will be handled later by stats scheduler
             olap = OLAP.objects(name=chart.olap)[0]
             if not olap.statsInfo:
-                data = chart.chartData(realtime = True)
-                if data:
+                filters = olap.olapFilter
+                olapOK = True
+                
+                i = 0
+                while olapOK and i < len(filters):
+                    f = filters[i]
+                    i += 1
+                    
+                    if f['type'] == 'measurement':
+                        name, dot, field = f['name'].partition('.')
+                        f['name'] = field
+                        part = False
+                        for r in frame['results']:
+                            part = part or r._data['measurement_name'] == name and self.checkFilter(f, r._data)
+                        olapOK = part
+                    elif f['type'] == 'framefeature':
+                        name, dot, field = f['name'].partition('.')
+                        f['name'] = field
+                        part = False
+                        for fe in frame['features']:
+                            part = part or fe._data['featuretype'] == name and self.checkFilter(f, fe._data)
+                        olapOK = part
+                    else:
+                        olapOK = self.checkFilter(f, frame)
+                
+                if olapOK:
+                    f = Filter()
+                    frame = f.unEmbed(frame)
+                    frame = f.flattenFrame([frame])
+                    data = olap.doPostProc(frame)
+                    data = chart.mapData(data)
                     self.sendMessage(chart, data)
+    
+    def checkFilter(self, filt, frame):
+        keyParts = filt['name'].split('.')
+        value = self.getFrameField(frame, keyParts)
+        
+        if 'exists' in filt and value:
+            return True
+        elif 'eq' in filt:
+            return filt['eq'] == value
+        elif 'gt' in filt or 'lt' in filt:
+            part = True
+            if 'gt' in filt:
+                part = part and filt['gt'] == value
+            if 'lt' in filt:
+                part = part and filt['lt'] == value
+            return part
+        else:
+            log.info('Unknown realtime filter parameter')
+            return True
+        
+    def getFrameField(self, field, keyParts):
+        # This function recursively pulls apart the key parts to unpack the hashes and find the actual value
+        
+        # Need special handling for results and features
+        if keyParts[0] == 'results' or keyParts[0] == 'features':
+            embeddedDocs = field[keyParts.pop()]
+            docBool = False
+            for d in embeddedDocs:
+                # work off copy to preserve original for future iterations of loop
+                keys = keyParts[:]
+                docBool = docBool or self.getFrameField(d._data, keys)
+        
+        if len(keyParts) == 1:
+            return field.get(keyParts[0], None)
+        else:
+            return self.getFrameField(field.get(keyParts.pop(0), {}), keyParts) 
                 
     def sendMessage(self, chart, data):
         if (len(data) > 0):
