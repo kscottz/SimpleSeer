@@ -97,18 +97,38 @@ module.exports = class TabContainer extends View
         $('#views-contain').removeClass('wide')
         @postFetch()
   """
-  toggleMenu: (callback) =>
+  
+  showMenu: (callback) =>
+    application.settings.showMenu = false if application.settings.showMenu is undefined
     if !callback then callback = =>
-    
-    if application.settings.showMenu
+      
+    if application.settings.showMenu is false
+      application.settings.showMenu = true
+      $('#second-tier-menu').show("slide", { direction: "left" }, 100)
+      $("#stage").animate({'margin-left':'343px'}, 100, 'linear', callback)
+    else
+      callback()
+  
+  hideMenu: (callback) =>
+    application.settings.showMenu = true if application.settings.showMenu is undefined
+    if !callback then callback = =>
+      
+    if application.settings.showMenu is true
       application.settings.showMenu = false
       $('#second-tier-menu').hide("slide", { direction: "left" }, 100)
       $("#stage").animate({'margin-left':'90px'}, 100, 'linear', callback)
     else
-      @hideImageExpanded()
-      application.settings.showMenu = true
-      $('#second-tier-menu').show("slide", { direction: "left" }, 100)
-      $("#stage").animate({'margin-left':'343px'}, 100, 'linear', callback)
+      callback()
+  
+  toggleMenu: (callback) =>
+    application.settings.showMenu = true if application.settings.showMenu is undefined
+    if !callback then callback = =>
+    
+    if application.settings.showMenu
+      @hideMenu(callback)
+    else
+      @showMenu(callback)
+      
   getRenderData: =>
     count_viewing: @filtercollection.length
     count_total: @filtercollection.totalavail
