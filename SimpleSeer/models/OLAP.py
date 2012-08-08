@@ -70,12 +70,12 @@ class OLAP(SimpleDoc, mongoengine.Document):
     def __repr__(self):
         return "<OLAP %s>" % self.name
 
-    def execute(self, filterParams = [], realtime=False):
+    def execute(self, filterParams = []):
         
         filterParams = self.mergeParams(filterParams)
         
         # Get the raw data
-        results = self.doQuery(filterParams, realtime=realtime)
+        results = self.doQuery(filterParams)
         
         # Run any descriptive statistics or aggregation
         results = self.doStats(results)
@@ -151,12 +151,12 @@ class OLAP(SimpleDoc, mongoengine.Document):
             if type(y) != float: return y
         return 0
 
-    def doQuery(self, filterParams, realtime = False):
+    def doQuery(self, filterParams):
         # Run the query, returning the results as a Pandas dataframe.
         # All the heavy lifting now done by Filters
         f = Filter()
         
-        count, frames = f.getFrames(filterParams, realtime=realtime)
+        count, frames = f.getFrames(filterParams)
         flat = f.flattenFrame(frames)
         
         return pd.DataFrame(flat)
