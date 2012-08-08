@@ -26,7 +26,7 @@ module.exports = class markupImage extends SubView
       @pjs.size @$el.width(), @model.get("height") * scale
       @pjs.scale scale
       
-      if !@model.get('features').length
+      if @model.get('features').length
         @model.get('features').each (f) => f.render(@pjs)
   
   setModel: (model) =>
@@ -35,4 +35,4 @@ module.exports = class markupImage extends SubView
     
   setZoom: (zoom) =>
     @zoom = zoom
-    @render()
+    @renderProcessing()
