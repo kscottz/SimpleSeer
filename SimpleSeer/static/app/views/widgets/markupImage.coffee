@@ -7,6 +7,11 @@ module.exports = class markupImage extends SubView
   className:"widget-markupImage"
 
   initialize: =>
+    $(window).scroll =>
+      if $(window).scrollTop() < 128 
+        $("#viewStage").removeClass("fixit");
+      else
+        $("#viewStage").addClass("fixit");        
   
   getRenderData: =>
     if @model
@@ -20,8 +25,8 @@ module.exports = class markupImage extends SubView
       #$@el.find(".image-view-item").addClass("currentExpanded");
       
       thumbnail = $($.find(".thumb")[0])
-      offsetLeft = thumbnail.offset().left + thumbnail.width() + 37 - 64 - 12
-      imgWidth = thumbnail.parents("#image_tab").width() - offsetLeft + 61 - 64 - 12
+      offsetLeft = thumbnail.offset().left + thumbnail.width() - 41
+      imgWidth = thumbnail.parents("#image_tab").width() - offsetLeft - 17
   
       framewidth = @model.get("width")
       realwidth = imgWidth
