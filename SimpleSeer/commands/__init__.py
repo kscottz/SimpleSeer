@@ -9,4 +9,4 @@ from .core_commands import ShellCommand
 from .core_commands import NotebookCommand
 from .replicate import ReplicateCommand
 from .script import ScriptCommand
-from .manage import CreateCommand
+from .manage import *
