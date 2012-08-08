@@ -17,11 +17,6 @@ class Filter():
         measurements = []
         features = []
         
-        # Only get one most recent result if realtime
-        if realtime:
-            pipeline.append({'$sort': {'capturetime': -1}})
-            pipeline.append({'$limit': 1})
-        
         # Need to initially construct/modify a few fields for future filters
         pipeline += self.initialFields(groupTime, valueMap)
         
@@ -66,7 +61,6 @@ class Filter():
         
         for r in results:
             r['capturetime'] = timegm(r['capturetime'].timetuple()) * 1000
-            print 'foo'
             
         return len(cmd['result']), results    
         
