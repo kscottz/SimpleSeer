@@ -4,12 +4,11 @@ from .models.Frame import Frame
 from .models.Inspection import Inspection
 from .models.Measurement import Measurement
 from datetime import datetime
+from calendar import timegm
 
 log = logging.getLogger(__name__)
 
 class Filter():
-    
-    fieldNames = ['_id', 'camera', 'capturetime', 'results', 'features', 'metadata', 'notes']
     
     def getFrames(self, allFilters, unit='frame', skip=0, limit=float("inf"), sortinfo = {}, statsInfo = {}, groupTime = '', valueMap = {}):
         
@@ -60,6 +59,10 @@ class Filter():
         else:
             return 0, []
         
+        for r in results:
+            r['capturetime'] = timegm(r['capturetime'].timetuple()) * 1000
+            print 'foo'
+            
         return len(cmd['result']), results    
         
     def initialFields(self, groupTime, valueMap):
@@ -70,7 +73,7 @@ class Filter():
         fields = {}
         
         # First select the fields from the frame to include
-        for p in self.fieldNames:
+        for p in Frame.filterFieldNames():
             fields[p] = 1
         
         # And we always need the features and results
@@ -260,7 +263,7 @@ class Filter():
                 proj[field + '.' + f] = 1
         
         
-        for key in self.fieldNames:
+        for key in Frame.filterFieldNames():
             # Have to rename the id field since $group statements assume existence of _id as the group_by parameter
             if key == 'id':
                 key = '_id'
@@ -477,8 +480,8 @@ class Filter():
     def keyNamesList(self):
         featureKeys, resultKeys = self.keyNamesHash()
         
-        fieldNames = self.fieldNames
-        
+        fieldNames = Frame.filterFieldNames()
+                
         for key in featureKeys.keys():
             for val in featureKeys[key]:
                 fieldNames.append(key + '.' + val)
@@ -499,7 +502,7 @@ class Filter():
             tmpFrame = {}
             
             # Grab the fields from the frame itself
-            for key in self.fieldNames:
+            for key in Frame.filterFieldNames():
                 if key == '_id' and 'id' in frame:
                     key = 'id'
                 tmpFrame[key] = frame[key]

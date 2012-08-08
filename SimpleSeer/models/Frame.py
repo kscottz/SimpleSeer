@@ -63,6 +63,12 @@ class Frame(SimpleDoc, mongoengine.Document):
     meta = {
         'indexes': ["capturetime", ('camera', '-capturetime')]
     }
+    
+    @classmethod
+    #which fields we care about for Filter.py
+    def filterFieldNames(cls):
+        return ['_id', 'camera', 'capturetime', 'results', 'features', 'metadata', 'notes', 'height', 'width', 'imgfile']
+
 
     @LazyProperty
     def thumbnail(self):

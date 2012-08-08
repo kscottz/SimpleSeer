@@ -46,7 +46,8 @@ def sio(path):
 
 @route('/')
 def index():
-    return redirect('/index.html')
+    #return redirect('/index.html')
+    return open(Session().web['static']['/'] + '/index.html').read()
 
 @route('/plugins.js')
 def plugins():
