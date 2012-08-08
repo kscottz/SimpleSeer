@@ -167,12 +167,13 @@ class Chart(SimpleDoc, mongoengine.Document):
 
         return meta
 
-    def chartData(self, filter_params = {}):
+    def chartData(self, filter_params = []):
         # Get the OLAP and its data
         o = OLAP.objects(name=self.olap)
         if len(o) == 1:
             o = o[0]
-            data = o.execute()
+            data = o.execute(filter_params)
+            # TODO: Need to work with jim to do handoff to temp olap for realtime
         else:
             log.warn("Found %d OLAPS in query for %s" % (len(o), o))
             data = []
