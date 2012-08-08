@@ -3,6 +3,8 @@ import os
 import os.path
 import sys
 import pkg_resources
+import subprocess
+import time
 from path import path
 
 class ManageCommand(Command):
@@ -38,6 +40,20 @@ class ResetCommand(ManageCommand):
         else:
             print "reset cancelled"
 
+class DeployCommand(ManageCommand):
+    "Deploy an instance"
+    def __init__(self, subparser):
+        subparser.add_argument("directory", help="Target", default = os.path.realpath(os.getcwd()), nargs = '?')
+
+    def run(self):
+        link = "/etc/simpleseer"
+        if os.path.exists(link):
+            os.remove(link)
+            
+        print "Linking %s to %s" % (self.options.directory, link)
+        os.symlink(self.options.directory, link)
+        print "Restarting jobs in supervisord"
+        subprocess.check_output(['supervisorctl', 'restart all'])
 
 
 
@@ -53,8 +69,6 @@ def WatchCommand(ManageCommand):
     #i'm not putting this in pip, since this isn't necessary in production
     from watchdog.observers import Observer
     from watchdog.events import FileSystemEventHandler
-    import time
-    import subprocess
     
     seer_event_handler = FileSystemEventHandler()
     seer_event_handler.eventqueue = []
@@ -97,7 +111,7 @@ def WatchCommand(ManageCommand):
                 
         time.sleep(0.5)
 
-    
+
 
 @ManageCommand.simple()
 def BuildCommand(self):
