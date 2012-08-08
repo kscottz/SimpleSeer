@@ -49,9 +49,7 @@ module.exports = class tableView extends SubView
       if dn.innerHTML == "Capture Time"
         dn.innerHTML += " " + new Date().toString().match(/\(.*\)/g)
     @$el.find('.tablesorter').tablesorter({widgets: ['zebra']})
-    #@$el.find('#excellink').attr('href','/downloadFrames/excel'+@exportUrl)
-    reg = RegExp(@emptyCell,'g')
-    $("input[name=rawdata]").attr('value',(JSON.stringify @rows).replace reg, '' )
+    $("input[name=rawdata]").attr('value',(JSON.stringify @rows).replace RegExp(@emptyCell,'g'), '' )
 
 
   getRenderData: =>
@@ -82,27 +80,6 @@ module.exports = class tableView extends SubView
         a.push @emptyCell
       retRow.push a
 
-    #csvString = ''
-    
-    #for csvheader in retHeader
-    #  csvString += '"'+csvheader+'",'
-    #csvString = $("<div/>").html(csvString.slice(0,-1)).text()
-    #csvString += "\n"
-      
-    #for csvrow in retRow
-    #  for item in csvrow
-    #    if item == '---'
-    #      item = ''
-    #    csvString += '"'+item+'",'
-    #  csvString = csvString.slice(0,-1)
-    #  csvString += "\n"
-    #@exportUrl = @options.parent.filtercollection.getUrl(true, {headers:retHeader})
-    #console.log @exportUrl
-    #@$el.find('#csvlink').attr('href','/downloadFrames/csv')
-    #uriContent = "data:text/csv," + encodeURIComponent(csvString)
-    #exportUrl = uriContent
-    #@$el.find("input[name=rawdata]").attr('value')
-    #console.log @$el.find('#csvlink').attr('href')
     @header = retHeader
     @rows = retRow
     return {header:retHeader,row:retRow}

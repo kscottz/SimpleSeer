@@ -73,7 +73,7 @@ module.exports = SeerApplication =
     window.SimpleSeer.alert(msg['data']['message'], msg['data']['severity'])
 
   isLoading: =>
-    !$('#loadThrob :hidden').length
+    !$('#throbber :hidden').length
     
   throbber:
     _cb:[]
