@@ -4,6 +4,7 @@ from .models.Frame import Frame
 from .models.Inspection import Inspection
 from .models.Measurement import Measurement
 from datetime import datetime
+from calendar import timegm
 
 log = logging.getLogger(__name__)
 
@@ -58,6 +59,10 @@ class Filter():
         else:
             return 0, []
         
+        for r in results:
+            r['capturetime'] = timegm(r['capturetime'].timetuple()) * 1000
+            print 'foo'
+            
         return len(cmd['result']), results    
         
     def initialFields(self, groupTime, valueMap):
