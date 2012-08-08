@@ -18,6 +18,7 @@ notebook = SimpleSeer.commands:NotebookCommand
 controls = SimpleSeer.commands:ControlsCommand
 replicate = SimpleSeer.commands:ReplicateCommand
 script = SimpleSeer.commands:ScriptCommand
+create = SimpleSeer.commands:CreateCommand
 '''
 entry_points += '''
 [paste.paster_create_template]
