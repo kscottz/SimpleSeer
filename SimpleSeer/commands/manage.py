@@ -2,6 +2,8 @@ from .base import Command
 import os
 import os.path
 import sys
+import pkg_resources
+from path import path
 
 class ManageCommand(Command):
     "Simple management tasks that don't require SimpleSeer context"
@@ -28,6 +30,7 @@ class ResetCommand(ManageCommand):
     def __init__(self, subparser):
         subparser.add_argument("database", help="Name of database", default="default", nargs='?')
 
+    #TODO, this should probably be moved to a pymongo command and include a supervisor restart all
     def run(self):
         print "This will destroy ALL DATA in database \"%s\", type YES to proceed:"
         if sys.stdin.readline() == "YES\n":
@@ -35,6 +38,66 @@ class ResetCommand(ManageCommand):
         else:
             print "reset cancelled"
 
+
+
+
+@ManageCommand.simple()
+def WatchCommand(ManageCommand):
+    cwd = os.path.realpath(os.getcwd())
+    package = cwd.split("/")[-1]
+
+    src_brunch = path(pkg_resources.resource_filename(
+        'SimpleSeer', 'static'))
+    tgt_brunch = path(cwd) / package / 'brunch_src'
+    
+    #i'm not putting this in pip, since this isn't necessary in production
+    from watchdog.observers import Observer
+    from watchdog.events import FileSystemEventHandler
+    import time
+    import subprocess
+    
+    seer_event_handler = FileSystemEventHandler()
+    seer_event_handler.eventqueue = []
+    def rebuild(event):
+        seer_event_handler.eventqueue.append(event)
+    
+    seer_event_handler.on_any_event = rebuild
+    
+    seer_observer = Observer()
+    seer_observer.schedule(seer_event_handler, path=src_brunch, recursive=True)
+    
+    local_event_handler = FileSystemEventHandler()
+    local_event_handler.eventqueue = []
+    
+    def build_local(event):
+        local_event_handler.eventqueue.append(event)
+        
+    local_event_handler.on_any_event = build_local
+    
+    local_observer = Observer()
+    local_observer.schedule(local_event_handler, path=tgt_brunch, recursive=True)
+    
+    seer_observer.start()
+    local_observer.start()
+    
+    while True:
+        if len(seer_event_handler.eventqueue):
+            time.sleep(0.2)
+            BuildCommand("").run()
+            time.sleep(0.1)
+            seer_event_handler.eventqueue = []
+            local_event_handler.eventqueue = []
+        
+        if len(local_event_handler.eventqueue):
+            time.sleep(0.2)
+            with tgt_brunch:
+                print "Updating " + cwd
+                print subprocess.check_output(['brunch', 'build'])
+            local_event_handler.eventqueue = []
+                
+        time.sleep(0.5)
+
+    
 
 @ManageCommand.simple()
 def BuildCommand(self):

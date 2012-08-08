@@ -9,6 +9,7 @@ module.exports = class ChartView extends View
   lastframe: ''
   _counter:0
   
+  
   initialize: =>
     #todo: find a way to make this work:
     #if @.type == 'ChartView'
