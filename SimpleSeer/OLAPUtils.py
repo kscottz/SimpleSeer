@@ -21,6 +21,13 @@ log = logging.getLogger(__name__)
 
 class OLAPFactory:
     
+    @classmethod
+    def confirmTransient(self, chartName):
+        chart = Chart.objects(name=chartName)[0]
+        olap = OLAP.objects(name=chart.olap)[0]
+        olap.confirmed = True
+        olap.save()
+    
     def createTransient(self, filters, originalChart):
         # A transient OLAP is one that should be delted when no subscriptions are listening
         # This is needed for OLAPs that publish realtime but are the result of filters
@@ -30,8 +37,8 @@ class OLAPFactory:
         # First, create the core OLAP
         originalOLAP = OLAP.objects(name = originalChart.olap)[0]
         o = self.fromFilter(filters, originalOLAP)
-        o.transient = 1
-        o.confirmed = 1
+        o.transient = True
+        o.confirmed = True
         o.save()
         
         # Create the chart to point to it
@@ -43,20 +50,6 @@ class OLAPFactory:
         c.olap = o.name
         c.save()
     
-    @classmethod
-    def removeTransient(self, olap):
-        from .models.Chart import Chart
-        
-        if olap.transient:
-            c = Chart.objects(olap=olap.name)[0]
-            c.delete()
-            o.delete()
-            log.info('Deleted transient OLAP: %s' % o.name)
-            log.info('Deleted associated chart: %s' % c.name)
-        
-        else:
-            log.info('%s is not transient' % olap.name)
-        
     def fromFilter(self, filters, oldOLAP = None):
         
         newOLAP = OLAP()
@@ -274,24 +267,28 @@ class ScheduledOLAP():
     
     
     def checkTransient(self):
-        import OLAPFactory
-        from SimpleSeer.realtime import ChannelManager
-        
         while True:
             # First delete transients that are inactive
             olds = OLAP.objects(transient = True, confirmed = False)
             for o in olds:
-                OLAPFactory.removeTransient(o)
+                c = Chart.objects(olap=o.name)[0]
+                c.delete()
+                o.delete()
+                log.info('Deleted transient OLAP: %s' % o.name)
+                log.info('Deleted associated chart: %s' % c.name)
+        
                 
             # Request updates on status of active olaps
             active = OLAP.objects(transient = True)
             for a in active:
                 # Set status to inactive until a client responds that it is in use
                 a.confirmed = False
+                a.save()
                 
                 # Publish a request that any listening clients confirm they are listening
-                c = Chart.objects(name=a.name)[0]
-                ChannelManager().publish(c.name, dict(u='data', m='ping')
+                chart = Chart.objects(olap=a.name)[0]
+                chartName = 'Chart/%s/' % utf8convert(chart.name) 
+                ChannelManager().publish(chartName, dict(u='data', m='ping'))
             
             sleep(3600)
             

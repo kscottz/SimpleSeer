@@ -501,6 +501,13 @@ def settings():
     text = Session().get_config()
     return {"settings": text }
 
+@route('/confirmTransient/<channel_name>', methods=['GET'])
+def confirmTransient(channel_name):
+    from .OLAPUtils import OLAPFactory
+    of = OLAPFactory()
+    of.confirmTransient(channel_name)
+    return ""
+
 @route('/chart/<chart_name>', methods=['GET'])
 @util.jsonify
 def chart(chart_name):
