@@ -78,12 +78,12 @@ module.exports = SeerApplication =
   throbber:
     _cb:[]
     load: (message,cb=[]) ->
-      $('#loadThrob').modal "show"
+      $('#throbber').show()
       for o in cb
         @callback(o)
       return
     clear: ->
-      $('#loadThrob').modal "hide"
+      $('#throbber').hide()
       for o in @_cb
         o()
       @_cb = []
