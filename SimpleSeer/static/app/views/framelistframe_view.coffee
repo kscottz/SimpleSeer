@@ -104,7 +104,6 @@ module.exports = class FramelistFrameView extends View
     metadata = []
     for i in application.settings.ui_metadata_keys
       metadata.push {key:i,val:md[i]}
-    console.log @frame.get('capturetime')
     retVal =
       capturetime: new moment(parseInt @frame.get('capturetime')).format("M/D/YYYY h:mm a")
       camera: @frame.get('camera')
@@ -118,7 +117,7 @@ module.exports = class FramelistFrameView extends View
       notes: @frame.get('notes')
     retVal
 
-  afterRender: =>    
+  afterRender: =>
     @$el.find(".notes-field").autogrow()
     @$el.find('.savebtn').button()
     @$el.find('.savebtn').hide()
