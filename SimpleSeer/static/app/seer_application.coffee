@@ -3,6 +3,7 @@ module.exports = SeerApplication =
   initialize: ->
     if @settings.mongo.is_slave
       $(".notebook").hide()
+			
     if !@settings.template_paths?
       @settings.template_paths = {}
     ViewHelper = require 'lib/view_helper'
@@ -22,7 +23,7 @@ module.exports = SeerApplication =
     @subscriptions = {}
     @timeOffset = (new Date()).getTimezoneOffset() * 60 * 1000
     @filters = require 'views/filters/init'
-
+		
     if !@.isMobile
       @.socket = io.connect '/rt'
       @.socket.on 'timeout', ->
@@ -77,12 +78,12 @@ module.exports = SeerApplication =
   throbber:
     _cb:[]
     load: (message,cb=[]) ->
-      $('#loadThrob').modal "show"
+      $('#throbber').show()
       for o in cb
         @callback(o)
       return
     clear: ->
-      $('#loadThrob').modal "hide"
+      $('#throbber').hide()
       for o in @_cb
         o()
       @_cb = []

@@ -97,22 +97,23 @@ ul {
   padding: 0px;
 }
 
-#markupImageTarget{
+#display{
   position: relative;
   overflow: hidden;
-}
-#markupImageTarget img {
+}  
+#display-img {
     width: 100%;
+}
+#display img {
     max-width: none;
 }
-#markupImageTarget canvas {
+#displaycanvas {
     position: absolute;
     top: 0px;
     left: 0px;
     width: 100%;
     height: 100%;
 }
-
 
 .brand {
   margin-top: 2px;
@@ -813,6 +814,7 @@ a.video{
   width:100%;
 }
 .image-view-item{
+		box-sizing: border-box;
   border-top: 1px solid #E0DEDE;
   padding:15px;
   font-weight:bold;
@@ -924,7 +926,12 @@ a.video{
   padding: 4px 12px;
 }
 
+a { font-size: 13px; color: #08C; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+
 .ivi-left .btnGp {
+	
+	div, a { font-size: 13px; color: #08C; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+	
   margin-top: 14px;
 
   div {
@@ -1022,7 +1029,7 @@ div.data-view-item {
   margin: 0;
   z-index: 1020;
   width: 300px;
-  top: 110px;
+  top: 63px;
 
   &.fixit {
     position: fixed;
@@ -1031,7 +1038,7 @@ div.data-view-item {
     
   }
 
-  #displayimage {
+  img {
     position: absolute;
     top: 0;
     left: 0;
@@ -1040,7 +1047,7 @@ div.data-view-item {
     border-width: 25px 20px 9999px;
   }
 
-  #displaycanvas {
+  canvas {
     position: absolute;
     top: 0;
     left: 0;
@@ -1063,7 +1070,25 @@ div.data-view-item {
   } 
 }
 
+#throbber{
+    height: 100%;
+    left: 0;
+    position: fixed;
+    top: 0;
+    width: 100%;
+}
+#throbberBody{
+    height: 90px;
+    left: 50%;
+    margin: -45px -250px;
+    position: fixed;
+    top: 50%;
+    width: 500px;
+}
+
 .pushLeft { margin-left: 30px; }
 
 #mainSpacer { padding: 10px; }
 .backLink { margni-top: 1px; margin-bottom: 10px; }
+
+.ui-tabs .ui-widget-header { background: none; }

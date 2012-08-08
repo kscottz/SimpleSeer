@@ -90,19 +90,6 @@ module.exports = class FramelistView extends View
         $('#views-controls').show()
         $('#views-contain').removeClass('wide')
         @postFetch()
-
-  toggleMenu: (callback) =>
-    if !callback then callback = =>
-    
-    if application.settings.showMenu
-      application.settings.showMenu = false
-      $('#second-tier-menu').hide("slide", { direction: "left" }, 100)
-      $("#stage").animate({'margin-left':'90px'}, 100, 'linear', callback)
-    else
-      @hideImageExpanded()
-      application.settings.showMenu = true
-      $('#second-tier-menu').show("slide", { direction: "left" }, 100)
-      $("#stage").animate({'margin-left':'343px'}, 100, 'linear', callback)
   
   getRenderData: =>
     count_viewing: @filtercollection.length
