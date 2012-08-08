@@ -42,7 +42,8 @@ exports.config =
           'vendor/scripts/jquery.tablesorter.pager.js',
           'vendor/scripts/processing.js',
           'vendor/scripts/jquery.ui.zoomify.js',
-          'vendor/scripts/jquery.autogrow-textarea.js']
+          'vendor/scripts/jquery.autogrow-textarea.js',
+          'vendor/scripts/jquery.tinyscrollbar.js']
 
     stylesheets:
       defaultExtension: 'less'
@@ -56,7 +57,8 @@ exports.config =
           'vendor/styles/tablesorter-blue.css',
           'vendor/styles/jquery.tablesorter.pager.css',
           'vendor/styles/jquery.ui.combobox.css',
-          'vendor/styles/jquery.ui.zoomify.css']
+          'vendor/styles/jquery.ui.zoomify.css',
+          'vendor/styles/jquery.tinyscrollbar.css']
 
     templates:
       defaultExtension: 'hbs'

@@ -44,12 +44,14 @@ module.exports = class tableView extends SubView
     val == false || val == ''
 
   afterRender: =>
+    super()
     l = @$el.find('thead :visible th')
     for dn in l
       if dn.innerHTML == "Capture Time"
         dn.innerHTML += " " + new Date().toString().match(/\(.*\)/g)
     @$el.find('.tablesorter').tablesorter({widgets: ['zebra']})
     $("input[name=rawdata]").attr('value',(JSON.stringify @rows).replace RegExp(@emptyCell,'g'), '' )
+    #@$el.find(".scrollbar").tinyscrollbar({ axis: 'x'})
 
 
   getRenderData: =>
