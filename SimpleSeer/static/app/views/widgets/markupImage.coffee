@@ -3,46 +3,36 @@ application = require '../../application'
 template = require './templates/markupImage'
 
 module.exports = class markupImage extends SubView
+  model: ""
+  pjs: ""
+  zoom: 1
   template: template
   className:"widget-markupImage"
-
-  initialize: =>
-  
+    
   getRenderData: =>
-    if @model
-      {imgfile:@model.id}
-  
-  afterRender: =>
-    @openUpExpanded()
-  
-  openUpExpanded: () =>
-    #if @lastModel is model
-    #  @hideImageExpanded()
-    #  @lastModel = ""
-    #  return
+    data = {url: ""}
+    if @model then data.url = "/grid/imgfile/" + @model.get("id")
+    data
       
-    #$@el.find(".image-view-item").addClass("currentExpanded");
+  afterRender: =>
+    @renderProcessing()
+      
+  renderProcessing: =>
+    if @model
+      scale = @$el.width() / @model.get("width")
+      
+      @pjs = new Processing(@$el.find("canvas").get 0)
+      @pjs.background(0,0)
+      @pjs.size @$el.width(), @model.get("height") * scale
+      @pjs.scale scale
+      
+      if @model.get('features').length
+        @model.get('features').each (f) => f.render(@pjs)
+  
+  setModel: (model) =>
+    @model = model
+    @render()
     
-    #thumbnail = element.find(".thumb")
-    #offsetLeft = thumbnail.offset().left + thumbnail.width() + 37
-    #imgWidth = thumbnail.parents("#views").width() - offsetLeft + 61
-    
-    offsetLeft = 0
-    imgWidth = 600
-    @$el.find("img").attr("src", @model.get('imgfile'))
-    $("#viewStage").css({"left": offsetLeft + "px", "width": imgWidth + "px", "display": "block"}).removeClass("fixit");
-
-    framewidth = @model.get("width")
-    realwidth = imgWidth
-    scale = realwidth / framewidth   
-
-    @pjs = new Processing(@$el.find("canvas").get 0)
-    @pjs.background(0,0)
-    @pjs.size @$el.width(), @model.get("height") * scale
-    @pjs.scale scale
-    
-    $("#displaycanvas").height(@model.get("height") * scale)
-    console.log @model.get('features')
-    if @model.get('features') then @model.get('features').each (f) => f.render(@pjs)
-    #@viewIsScrolled()
-    #@lastModel = @model
+  setZoom: (zoom) =>
+    @zoom = zoom
+    @renderProcessing()

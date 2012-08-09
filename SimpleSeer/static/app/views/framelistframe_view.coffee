@@ -16,8 +16,6 @@ module.exports = class FramelistFrameView extends View
     @frame = frame.model
 
   events:
-    'click .action-viewFrame' : 'expandImage'
-    'keypress .action-viewFrame' : 'expandImage'
     'click .clickEdit'  : 'switchStaticMeta'
     'blur .clickEdit'  : 'switchInputMeta'
     'click .notes-field' : 'setDirty'
@@ -107,7 +105,7 @@ module.exports = class FramelistFrameView extends View
     for i in application.settings.ui_metadata_keys
       metadata.push {key:i,val:md[i]}
     retVal =
-      capturetime: new moment(parseInt @frame.get('capturetime')+'000').format("M/D/YYYY h:mm a")
+      capturetime: new moment(parseInt @frame.get('capturetime')).format("M/D/YYYY h:mm a")
       camera: @frame.get('camera')
       imgfile: @frame.get('imgfile')
       thumbnail_file: @frame.get('thumbnail_file')
@@ -119,7 +117,7 @@ module.exports = class FramelistFrameView extends View
       notes: @frame.get('notes')
     retVal
 
-  afterRender: =>    
+  afterRender: =>
     @$el.find(".notes-field").autogrow()
     @$el.find('.savebtn').button()
     @$el.find('.savebtn').hide()
