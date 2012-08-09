@@ -76,8 +76,8 @@ $.widget("ui.zoomify", {
     content.find(".view").attr("width", stuff.width).attr("height", stuff.height);
     
     content.find(".view").click(function(e) {
-      self.viewport.x = e.offsetX - content.find(".frame").width() / 2;
-      self.viewport.y = e.offsetY - content.find(".frame").height() / 2;
+      self.viewport.x = (e.offsetX || e.originalEvent.layerX - $(e.target).position().left) - content.find(".frame").width() / 2;
+      self.viewport.y = (e.offsetY || e.originalEvent.layerY - $(e.target).position().top) - content.find(".frame").height() / 2;
       self.updateDisplay();
     });
     
