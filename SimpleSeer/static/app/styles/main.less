@@ -329,8 +329,9 @@ p.frame_icons{
 }
 #filter_form .ui-combobox input{
   cursor: pointer;
-  
-  width:165px;
+	box-shadow: none;
+	border-radius: 3px 0 0 3px;
+  width:174px;
 }
 #filter_form .oneLine input[type=text] {
   cursor: pointer;
@@ -1107,7 +1108,11 @@ div.data-view-item {
 
 .ui-tabs-panel { border: 1px solid #aaa !important; }
 
-.ui-state-default, .ui-widget-content .ui-state-default, .ui-widget-header .ui-state-default { background: white; }
+.ui-tabs-panel .ui-state-default,
+.ui-tabs-panel .ui-widget-content .ui-state-default,
+.ui-tabs-panel .ui-widget-header .ui-state-default {
+	background: white;
+}
 
 .ui-tabs-nav { padding: 0px !important; }
 
@@ -1122,5 +1127,26 @@ div.data-view-item {
 }
 
 #tabs.ui-tabs { padding: 0px !important; border: none !important }
-
+#ui-datepicker-div {
+	margin-top: 1px;
+	padding: 8px;
+	box-shadow: rgba(0, 0, 0, 0.296875) 0px 5px 15px;
+}
+.ui-combobox-toggle { width: 20px !important; }
 .image-view-item:first-child { border-top: none !important; }
+
+#csv_button, #excel_button {
+	color: #0090D6;
+	display: inline;
+	border: none;
+	background: none;
+	box-shadow: none;
+	padding-top: 10px;
+}
+
+#views-tabs-linkbar, #data_tab form { display: inline-block; }
+
+
+
+
+

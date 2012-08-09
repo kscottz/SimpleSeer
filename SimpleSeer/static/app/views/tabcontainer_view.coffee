@@ -99,34 +99,40 @@ module.exports = class TabContainer extends View
   """
   
   showMenu: (callback) =>
-    application.settings.showMenu = false if application.settings.showMenu is undefined
+    @sideBarOpen = false if @sideBarOpen is undefined
     if !callback then callback = =>
       
-    if application.settings.showMenu is false
-      application.settings.showMenu = true
+    if @sideBarOpen is false
+      @sideBarOpen = true
       $('#second-tier-menu').show("slide", { direction: "left" }, 100)
       $("#stage").animate({'margin-left':'343px'}, 100, 'linear', callback)
     else
       callback()
   
   hideMenu: (callback) =>
-    application.settings.showMenu = true if application.settings.showMenu is undefined
+    @sideBarOpen = true if @sideBarOpen is undefined
     if !callback then callback = =>
       
-    if application.settings.showMenu is true
-      application.settings.showMenu = false
+    if @sideBarOpen is true
+      @sideBarOpen = false
       $('#second-tier-menu').hide("slide", { direction: "left" }, 100)
       $("#stage").animate({'margin-left':'90px'}, 100, 'linear', callback)
     else
       callback()
   
   toggleMenu: (callback) =>
-    application.settings.showMenu = true if application.settings.showMenu is undefined
+    @sideBarOpen = true if @sideBarOpen is undefined
     if !callback then callback = =>
     
-    if application.settings.showMenu
+    if @sideBarOpen
+      for i,o of @tabs
+        if o.hideMenuCallback
+          o.hideMenuCallback()
       @hideMenu(callback)
     else
+      for i,o of @tabs
+        if o.showMenuCallback
+          o.showMenuCallback()
       @showMenu(callback)
       
   getRenderData: =>
@@ -139,6 +145,7 @@ module.exports = class TabContainer extends View
     filter_url:@filtercollection.getUrl()
 
   render: =>
+    @sideBarOpen = true
     #@filtercollection.limit = @filtercollection._defaults.limit
     #@filtercollection.skip = @filtercollection._defaults.skip
     if @rendered

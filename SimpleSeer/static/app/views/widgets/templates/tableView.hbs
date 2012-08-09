@@ -6,9 +6,6 @@
   <input type="submit" id="excel_button" value="excel">
 </form>
 <div >
-  	<div class="scrollbar"><div class="track"><div class="thumb"><div class="end"></div></div></div></div>
-	    <div class="viewport">
-		    <div class="overview">
 
 <table class="tablesorter">
   <thead> 
@@ -31,6 +28,12 @@
   </tbody>
 </table>
 
-    </div>
-  </div>
 </div>
+
+<div id="views-tabs-linkbar">Download </div>
+<form action="/downloadFrames" method=POST>
+  <input type="hidden" name='format' value='excel'>
+  <input type="hidden" name="rawdata">
+  <input type="submit" id="csv_button" value="csv">
+  <input type="submit" id="excel_button" value="excel">
+</form>
