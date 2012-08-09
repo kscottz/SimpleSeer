@@ -60,6 +60,7 @@ class OLAP(SimpleDoc, mongoengine.Document):
     statsInfo = mongoengine.ListField()
     notNull = mongoengine.IntField()
     transient = mongoengine.BooleanField()
+    confirmed = mongoengine.BooleanField()
     
     meta = {
         'indexes': ['name']
@@ -155,7 +156,7 @@ class OLAP(SimpleDoc, mongoengine.Document):
         # All the heavy lifting now done by Filters
         f = Filter()
         
-        count, frames = f.getFrames(filterParams, unit='result')
+        count, frames = f.getFrames(filterParams)
         flat = f.flattenFrame(frames)
         
         return pd.DataFrame(flat)

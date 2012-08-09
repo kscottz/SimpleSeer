@@ -61,7 +61,7 @@ class Frame(SimpleDoc, mongoengine.Document):
     _imgcache = ''
 
     meta = {
-        'indexes': ["capturetime", ('camera', '-capturetime')]
+        'indexes': ["capturetime", "-capturetime", ('camera', '-capturetime')]
     }
     
     @classmethod

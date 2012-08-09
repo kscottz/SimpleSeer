@@ -43,7 +43,8 @@ exports.config =
           'vendor/scripts/processing.js',
           'vendor/scripts/jquery.ui.zoomify.js',
           'vendor/scripts/jquery.autogrow-textarea.js',
-          'vendor/scripts/jquery.tinyscrollbar.js']
+          'vendor/scripts/jquery.tinyscrollbar.js',
+          'vendor/scripts/sm.datetimerange.js']
 
     stylesheets:
       defaultExtension: 'less'
@@ -58,7 +59,8 @@ exports.config =
           'vendor/styles/jquery.tablesorter.pager.css',
           'vendor/styles/jquery.ui.combobox.css',
           'vendor/styles/jquery.ui.zoomify.css',
-          'vendor/styles/jquery.tinyscrollbar.css']
+          'vendor/styles/jquery.tinyscrollbar.css',
+          'vendor/styles/sm.datetimerange.css']
 
     templates:
       defaultExtension: 'hbs'

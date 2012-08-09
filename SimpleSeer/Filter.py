@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 
 class Filter():
     
-    def getFrames(self, allFilters, unit='frame', skip=0, limit=float("inf"), sortinfo = {}, statsInfo = {}, groupTime = '', valueMap = {}):
+    def getFrames(self, allFilters, skip=0, limit=float("inf"), sortinfo = {}, statsInfo = {}, groupTime = '', valueMap = {}):
         
         pipeline = []
         frames = []
@@ -35,14 +35,14 @@ class Filter():
             pipeline += self.filterFrames(frames)
         
             
-        pipeline += self.filterMeasurements(measurements, unit)            
-        pipeline += self.filterFeatures(features, unit)
+        pipeline += self.filterMeasurements(measurements)            
+        pipeline += self.filterFeatures(features)
         
         # Sort the results
         pipeline += self.sort(sortinfo)
         
-        for p in pipeline:
-            print 'LINE: %s' % str(p)
+        #for p in pipeline:
+        #    print 'LINE: %s' % str(p)
         
         # This is all done through mongo aggregation framework
         db = Frame._get_db()
@@ -61,7 +61,6 @@ class Filter():
         
         for r in results:
             r['capturetime'] = timegm(r['capturetime'].timetuple()) * 1000
-            print 'foo'
             
         return len(cmd['result']), results    
         
@@ -172,7 +171,7 @@ class Filter():
          
         return [{'$match': filters}]
     
-    def filterMeasurements(self, measQuery, unit):
+    def filterMeasurements(self, measQuery):
         # Do the basic pipeline construction for filtering on Measurements
         # (which appear in Frames under $results)
         # Always unwind to filter out unneded fields from results
@@ -201,7 +200,7 @@ class Filter():
         return parts
     
     
-    def filterFeatures(self, featQuery, unit):
+    def filterFeatures(self, featQuery):
         # Do the basic pipeline construction for filtering on features
         
         parts = []
@@ -447,16 +446,14 @@ class Filter():
                 plugin = i.get_plugin(i.method)
                 if 'printFields' in dir(plugin):
                     featureKeys[i.name] = plugin.printFields()
-                    # Always make sure the featuretype field is listed
+                    # Always make sure the featuretype and inspection fields listed for other queries
                     featureKeys[i.name].append('featuretype')
-                    print 'FOUND for ' + str(plugin)
+                    featureKeys[i.name].append('inspection')
                 else:
-                    featureKeys[i.name] = ['featuretype', 'featuredata']
-                    print 'NOT FOUND'
+                    featureKeys[i.name] = ['featuretype', 'inspection', 'featuredata']
             except ValueError:
-                print 'NO PLUGIN'
                 log.info('No plugin found for %s, using default fields' % i.method)
-                featureKeys[i.name] = ['featuretype', 'featuredata']
+                featureKeys[i.name] = ['featuretype', 'inspection', 'featuredata']
                 
         # Becuase of manual measurements, need to look at frame results to figure out if numeric or string fields in place
         for m in Measurement.objects:
@@ -492,7 +489,34 @@ class Filter():
             
         return fieldNames
         
+    
+    @classmethod
+    def unEmbed(self, frame):
+        feats = frame['features']
+        newFeats = []
+        for f in feats:
+            newFeats.append(f.__dict__['_data'])
+        frame['features'] = newFeats
         
+        results = frame['results']
+        newRes = []
+        for r in results:
+            newRes.append(r.__dict__['_data'])
+        frame['results'] = newRes
+        
+        return frame
+    
+    def getField(self, field, keyParts):
+        # This function recursively pulls apart the key parts to unpack the hashes and find the actual value
+                
+        if len(keyParts) == 1:
+            return field.get(keyParts[0], None)
+        else:
+            return self.getField(field.get(keyParts.pop(0), {}), keyParts) 
+    
+    def inspectionIdToName(self, inspId):
+        return Inspection.objects(id=inspId)[0].name
+    
     def flattenFrame(self, frames):
         
         featureKeys, resultKeys = self.keyNamesHash()
@@ -505,25 +529,28 @@ class Filter():
             for key in Frame.filterFieldNames():
                 if key == '_id' and 'id' in frame:
                     key = 'id'
-                tmpFrame[key] = frame[key]
-            
+                
+                keyParts = key.split('.')
+                tmpFrame[key] = self.getField(frame, keyParts)
+                
             # Fields from the features
             for feature in frame['features']:
                 # If this feature has items that need to be saved
-                if feature['featuretype'] in featureKeys.keys():
+                inspection_name = self.inspectionIdToName(feature['inspection']) 
+                if  inspection_name in featureKeys.keys():
                     # Pull up the relevant keys, named featuretype.field
-                    for field in featureKeys[feature['featuretype']]:
-                        tmpFrame[feature['featuretype'] + '.' + field] = feature[field]
+                    for field in featureKeys[inspection_name]:
+                        keyParts = field.split('.')
+                        tmpFrame[feature['featuretype'] + '.' + field] = self.getField(feature, keyParts)
              
             # Fields from the results
             for result in frame['results']:
                 # If this result has items that need to be saved
                 if result['measurement_name'] in resultKeys.keys():
                     for field in resultKeys[result['measurement_name']]:
-                        tmpFrame[result['measurement_name'] + '.' + field] = result[field]
+                        keyParts = field.split('.')
+                        tmpFrame[result['measurement_name'] + '.' + field] = self.getField(result, keyParts)
                             
             flatFrames.append(tmpFrame)
             
         return flatFrames
-	
-		

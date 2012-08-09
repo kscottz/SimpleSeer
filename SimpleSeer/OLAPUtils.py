@@ -1,4 +1,5 @@
 from .models.OLAP import OLAP
+from .models.Chart import Chart
 from .models.Measurement import Measurement
 from .models.Inspection import Inspection
 
@@ -20,6 +21,13 @@ log = logging.getLogger(__name__)
 
 class OLAPFactory:
     
+    @classmethod
+    def confirmTransient(self, chartName):
+        chart = Chart.objects(name=chartName)[0]
+        olap = OLAP.objects(name=chart.olap)[0]
+        olap.confirmed = True
+        olap.save()
+    
     def createTransient(self, filters, originalChart):
         # A transient OLAP is one that should be delted when no subscriptions are listening
         # This is needed for OLAPs that publish realtime but are the result of filters
@@ -30,6 +38,7 @@ class OLAPFactory:
         originalOLAP = OLAP.objects(name = originalChart.olap)[0]
         o = self.fromFilter(filters, originalOLAP)
         o.transient = True
+        o.confirmed = True
         o.save()
         
         # Create the chart to point to it
@@ -41,33 +50,6 @@ class OLAPFactory:
         c.olap = o.name
         c.save()
     
-    def removeTransient(self, chartName):
-        from .models.Chart import Chart
-        
-        cs = Chart.objects(name = chartName)
-        if cs:
-            c = cs[0]
-        else:
-            log.warn('Asked to cleanup %s, but it does not exist' % chartName)
-            return
-            
-        os = OLAP.objects(name = c.olap)
-        if os:
-            o = os[0]
-        else:
-            log.warn('No OLAPs associated with %s' % chartName)
-            return
-            
-        if o.transient:
-            log.info('Deleting transient OLAP: %s' % o.name)
-            o.delete()
-            log.info('Deleting associated chart: %s' % c.name)
-            c.delete()
-        else:
-            log.info('Nobody listening to OLAP %s' % o.name)
-        
-        
-        
     def fromFilter(self, filters, oldOLAP = None):
         
         newOLAP = OLAP()
@@ -171,65 +153,94 @@ class RealtimeOLAP():
     
     def realtime(self, frame):
         
-        conds = []
-        for res in frame.results:
-            conds.append({'queryType': 'measurement_id', 'queryId': res.measurement_id})
-        for feat in frame.features:
-            conds.append({'queryType':'inspection_id', 'queryId': feat.inspection})
+        charts = Chart.objects()
         
-            
-        olaps = OLAP.objects(__raw__={'$or': conds}) 
+        # Functions below assume frame is a dict not an object 
+        frame = frame.__dict__['_data']
         
-        print len(olaps)
-        
-        f = Filter()
-        flattened = f.flattenFrame([frame])
-        
-        for o in olaps:
+        for chart in charts:
             # If no statistics, send result on its way
             # If there are stats, it will be handled later by stats scheduler
-            if not o.statsInfo:
-                formatted = self.formatFrame(o, flattened)
-                dFrame = [v for v in formatted.transpose().to_dict().values()][0]
-                if len(dFrame):
-                    self.sendOLAP(dFrame, o)
-
-                 
-    def sendOLAP(self, data, o):
-        from .models.Chart import Chart
+            olap = OLAP.objects(name=chart.olap)[0]
+            if not olap.statsInfo:
+                filters = olap.olapFilter
+                olapOK = True
+                
+                i = 0
+                while olapOK and i < len(filters):
+                    f = filters[i]
+                    i += 1
+                    
+                    if f['type'] == 'measurement':
+                        name, dot, field = f['name'].partition('.')
+                        f['name'] = field
+                        part = False
+                        for r in frame['results']:
+                            part = part or r._data['measurement_name'] == name and self.checkFilter(f, r._data)
+                        olapOK = part
+                    elif f['type'] == 'framefeature':
+                        name, dot, field = f['name'].partition('.')
+                        f['name'] = field
+                        part = False
+                        for fe in frame['features']:
+                            part = part or fe._data['featuretype'] == name and self.checkFilter(f, fe._data)
+                        olapOK = part
+                    else:
+                        olapOK = self.checkFilter(f, frame)
+                
+                if olapOK:
+                    f = Filter()
+                    frame = f.unEmbed(frame)
+                    frame = f.flattenFrame([frame])
+                    data = olap.doPostProc(frame)
+                    data = chart.mapData(data)
+                    self.sendMessage(chart, data)
+    
+    def checkFilter(self, filt, frame):
+        keyParts = filt['name'].split('.')
+        value = self.getFrameField(frame, keyParts)
         
-        if len(data) > 0:
-            # Need long term fix: only publish to charts that are listened to
-            cs = Chart.objects(olap = o.name)
-            
-            for c in cs:
-                thisData = data.copy()
-                chartData = c.mapData([thisData])
-                self.sendMessage(o, chartData, c.name)                     
-
-
-    def formatFrame(self, o, frame):
+        if 'exists' in filt and value:
+            return True
+        elif 'eq' in filt:
+            return filt['eq'] == value
+        elif 'gt' in filt or 'lt' in filt:
+            part = True
+            if 'gt' in filt:
+                part = part and filt['gt'] == value
+            if 'lt' in filt:
+                part = part and filt['lt'] == value
+            return part
+        else:
+            log.info('Unknown realtime filter parameter')
+            return True
         
-        sinceok = (not o.since) or (frame.capturetime > o.since)
-        beforeok = (not o.before) or (frame.capturetime < o.before)
+    def getFrameField(self, field, keyParts):
+        # This function recursively pulls apart the key parts to unpack the hashes and find the actual value
         
-        if sinceok and beforeok:
-            # Use only the specified fields
-            frame = pd.DataFrame(frame)
-            frame = o.doPostProc(frame)
+        # Need special handling for results and features
+        if keyParts[0] == 'results' or keyParts[0] == 'features':
+            embeddedDocs = field[keyParts.pop()]
+            docBool = False
+            for d in embeddedDocs:
+                # work off copy to preserve original for future iterations of loop
+                keys = keyParts[:]
+                docBool = docBool or self.getFrameField(d._data, keys)
         
-        return frame
-
-
-    def sendMessage(self, o, data, subname):
+        if len(keyParts) == 1:
+            return field.get(keyParts[0], None)
+        else:
+            return self.getFrameField(field.get(keyParts.pop(0), {}), keyParts) 
+                
+    def sendMessage(self, chart, data):
+        
         if (len(data) > 0):
             msgdata = dict(
-                olap = str(o.name),
+                chart = str(chart.name),
                 data = data)
         
-            print 'going to send' + str(msgdata)
-            olapName = 'Chart/%s/' % utf8convert(subname) 
-            ChannelManager().publish(olapName, dict(u='data', m=msgdata))
+            chartName = 'Chart/%s/' % utf8convert(chart.name) 
+            ChannelManager().publish(chartName, dict(u='data', m=msgdata))
             
 
 class ScheduledOLAP():
@@ -243,7 +254,9 @@ class ScheduledOLAP():
         glets.append(Greenlet(self.skedLoop, 'minute'))
         glets.append(Greenlet(self.skedLoop, 'hour'))
         glets.append(Greenlet(self.skedLoop, 'day'))
-    
+        
+        glets.append(Greenlet(self.checkTransient))
+        
         # Start all the greenlets
         for g in glets:
             g.start()
@@ -251,8 +264,34 @@ class ScheduledOLAP():
         # Join all the greenlets
         for g in glets:
             g.join()
+    
+    
+    def checkTransient(self):
+        while True:
+            # First delete transients that are inactive
+            olds = OLAP.objects(transient = True, confirmed = False)
+            for o in olds:
+                c = Chart.objects(olap=o.name)[0]
+                c.delete()
+                o.delete()
+                log.info('Deleted transient OLAP: %s' % o.name)
+                log.info('Deleted associated chart: %s' % c.name)
         
-        
+                
+            # Request updates on status of active olaps
+            active = OLAP.objects(transient = True)
+            for a in active:
+                # Set status to inactive until a client responds that it is in use
+                a.confirmed = False
+                a.save()
+                
+                # Publish a request that any listening clients confirm they are listening
+                chart = Chart.objects(olap=a.name)[0]
+                chartName = 'Chart/%s/' % utf8convert(chart.name) 
+                ChannelManager().publish(chartName, dict(u='data', m='ping'))
+            
+            sleep(3600)
+            
     def skedLoop(self, interval):
         
         from datetime import datetime
