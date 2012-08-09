@@ -50,7 +50,9 @@ module.exports = class tableView extends SubView
       if dn.innerHTML == "Capture Time"
         dn.innerHTML += " " + new Date().toString().match(/\(.*\)/g)
     @$el.find('.tablesorter').tablesorter({widgets: ['zebra']})
-    $("input[name=rawdata]").attr('value',(JSON.stringify @rows).replace RegExp(@emptyCell,'g'), '' )
+    js = @rows
+    js.unshift @header
+    $("input[name=rawdata]").attr('value',(JSON.stringify js).replace RegExp(@emptyCell,'g'), '' )
     #@$el.find(".scrollbar").tinyscrollbar({ axis: 'x'})
 
 
