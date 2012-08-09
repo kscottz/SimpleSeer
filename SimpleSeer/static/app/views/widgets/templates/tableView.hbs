@@ -1,4 +1,12 @@
-<div id="views-tabs-linkbar">Download <a href="{{exportUrl}}" id="csvlink" target="_blank">CSV</a><!-- / <a href="#" id="excellink" target="_blank">Excel</a>--></div>
+<div id="views-tabs-linkbar">Download </div>
+<form action="/downloadFrames" method=POST>
+  <input type="hidden" name='format' value='excel'>
+  <input type="hidden" name="rawdata">
+  <input type="submit" id="csv_button" value="csv">
+  <input type="submit" id="excel_button" value="excel">
+</form>
+<div >
+
 <table class="tablesorter">
   <thead> 
     <tr>
@@ -19,3 +27,13 @@
       {{/each}}
   </tbody>
 </table>
+
+</div>
+
+<div id="views-tabs-linkbar">Download </div>
+<form action="/downloadFrames" method=POST>
+  <input type="hidden" name='format' value='excel'>
+  <input type="hidden" name="rawdata">
+  <input type="submit" id="csv_button" value="csv">
+  <input type="submit" id="excel_button" value="excel">
+</form>

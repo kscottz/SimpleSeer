@@ -7,6 +7,11 @@ module.exports = class SubView extends View
     selector: null
 
   render: () =>
-    @setElement @options.parent.$ @options.selector
+    if @options.append
+      if !@options.parent.$('#'+@options.append).length
+        @options.parent.$(@options.selector).append('<div id="'+@options.append+'" />')
+      @setElement @options.parent.$ '#'+@options.append
+    else
+      @setElement @options.parent.$ @options.selector
     super
     @

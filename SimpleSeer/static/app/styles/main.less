@@ -97,25 +97,27 @@ ul {
   padding: 0px;
 }
 
-#display{
+#display {
   position: relative;
   overflow: hidden;
-}  
-#display-img {
+}
+
+#display img {
     width: 100%;
 }
+
 #display img {
     max-width: none;
 }
-#displaycanvas {
+
+#display canvas {
     position: absolute;
     top: 0px;
     left: 0px;
     width: 100%;
     height: 100%;
 }
-  
-  
+
 .brand {
   margin-top: 2px;
 }
@@ -327,8 +329,9 @@ p.frame_icons{
 }
 #filter_form .ui-combobox input{
   cursor: pointer;
-  
-  width:165px;
+	box-shadow: none;
+	border-radius: 3px 0 0 3px;
+  width:174px;
 }
 #filter_form .oneLine input[type=text] {
   cursor: pointer;
@@ -815,7 +818,8 @@ a.video{
   width:100%;
 }
 .image-view-item{
-  border-top: 1px solid #E0DEDE;
+		box-sizing: border-box;
+  border-top: 1px solid #aaa;
   padding:15px;
   font-weight:bold;
   float:left;
@@ -852,7 +856,7 @@ a.video{
   }
   .thumb{
     background: #f8f8f8;
-    border-radius: 2px;
+    border-radius: 0px;
     border:#ccc solid 1px;
     padding:7px;
   }
@@ -863,7 +867,7 @@ a.video{
   padding: 20px;
   background: #f8f8f8;
   border: 1px solid #e4e4e4;
-  border-radius: 2px;
+  border-radius: 0px;
   color: #000;
 }
 
@@ -926,7 +930,12 @@ a.video{
   padding: 4px 12px;
 }
 
+a { font-size: 13px; color: #08C; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+
 .ivi-left .btnGp {
+	
+	div, a { font-size: 13px; color: #08C; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+	
   margin-top: 14px;
 
   div {
@@ -1015,7 +1024,7 @@ table.tablesorter tbody tr.odd td {
 }
 
 div.data-view-item {
-    overflow-x: scroll;
+  overflow-x: scroll;
 }
 
 #viewStage {
@@ -1024,7 +1033,7 @@ div.data-view-item {
   margin: 0;
   z-index: 1020;
   width: 300px;
-  top: 110px;
+  top: 63px;
 
   &.fixit {
     position: fixed;
@@ -1033,7 +1042,7 @@ div.data-view-item {
     
   }
 
-  #displayimage {
+  img {
     position: absolute;
     top: 0;
     left: 0;
@@ -1042,7 +1051,7 @@ div.data-view-item {
     border-width: 25px 20px 9999px;
   }
 
-  #displaycanvas {
+  canvas {
     position: absolute;
     top: 0;
     left: 0;
@@ -1065,7 +1074,79 @@ div.data-view-item {
   } 
 }
 
+#throbber{
+    height: 100%;
+    left: 0;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    background: rgba(0,0,0,0.5);
+}
+#throbberBody{
+    background: #fff;
+    -moz-border-radius: 7px;
+    -webkit-border-radius: 7px;
+    border-radius: 7px;
+    box-shadow: 0px 3px 15px rgba(0,0,0,.5);
+    
+    left: 50%;
+    margin: -47px -250px;
+    position: fixed;
+    top: 50%;
+    width: 500px;
+    padding: 15px;
+    
+    .message { font-size: 20px; text-align: center; margin-top: 20px; }
+}
+
 .pushLeft { margin-left: 30px; }
 
 #mainSpacer { padding: 10px; }
-.backLink { margni-top: 1px; margin-bottom: 10px; }
+.backLink { margin-top: 1px; margin-bottom: 10px; }
+
+.ui-tabs .ui-widget-header { background: none; }
+
+.ui-tabs-panel { border: 1px solid #aaa !important; }
+
+.ui-tabs-panel .ui-state-default,
+.ui-tabs-panel .ui-widget-content .ui-state-default,
+.ui-tabs-panel .ui-widget-header .ui-state-default {
+	background: white;
+}
+
+.ui-tabs-nav { padding: 0px !important; }
+
+.ui-tabs-nav li {
+	background: #f3f3f3 !important;
+	a { color: #0090D6 !important; }
+}
+
+.ui-tabs-nav li.ui-tabs-selected {
+	background: #fff !important;
+	a { color: black !important; }
+}
+
+#tabs.ui-tabs { padding: 0px !important; border: none !important }
+#ui-datepicker-div {
+	margin-top: 1px;
+	padding: 8px;
+	box-shadow: rgba(0, 0, 0, 0.296875) 0px 5px 15px;
+}
+.ui-combobox-toggle { width: 20px !important; }
+.image-view-item:first-child { border-top: none !important; }
+
+#csv_button, #excel_button {
+	color: #0090D6;
+	display: inline;
+	border: none;
+	background: none;
+	box-shadow: none;
+	padding-top: 10px;
+}
+
+#views-tabs-linkbar, #data_tab form { display: inline-block; }
+
+
+
+
+

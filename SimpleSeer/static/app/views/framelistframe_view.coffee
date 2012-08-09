@@ -4,18 +4,18 @@ application = require('application')
 
 module.exports = class FramelistFrameView extends View
   template: template
+  className:'image-view-item'
   
   initialize: (frame)=>
     super()
+    if !frame.model.attributes.metadata
+      frame.model.attributes.metadata = {}
     for k in application.settings.ui_metadata_keys
       if !frame.model.attributes.metadata[k]?
         frame.model.attributes.metadata[k] = ''
     @frame = frame.model
 
-  
   events:
-    'click .action-viewFrame' : 'expandImage'
-    'keypress .action-viewFrame' : 'expandImage'
     'click .clickEdit'  : 'switchStaticMeta'
     'blur .clickEdit'  : 'switchInputMeta'
     'click .notes-field' : 'setDirty'
@@ -27,10 +27,10 @@ module.exports = class FramelistFrameView extends View
   expandImage: =>
     application.framelistView.showImageExpanded @$el, @frame, @model
     @$el.find('.featureLabel').show()
-    
+  
   hideImage: =>
     @$el.find('.featureLabel').hide()
-
+  
   showSaved: =>
     @$el.find('.savebtn').show()
     
@@ -74,7 +74,7 @@ module.exports = class FramelistFrameView extends View
       metadata[$(span).html()] = input.attr('value')
     
     #@addMetaBox(self)
-    @model.save {metadata: metadata}
+    @model.save {metadata: metadata,notes:$(".notes-field").attr('value')}
     @setSaved()
 
   updateNotes: (e) =>
@@ -105,7 +105,7 @@ module.exports = class FramelistFrameView extends View
     for i in application.settings.ui_metadata_keys
       metadata.push {key:i,val:md[i]}
     retVal =
-      capturetime: new moment(parseInt @frame.get('capturetime')+'000').format("M/D/YYYY h:mm a")
+      capturetime: new moment(parseInt @frame.get('capturetime')).format("M/D/YYYY h:mm a")
       camera: @frame.get('camera')
       imgfile: @frame.get('imgfile')
       thumbnail_file: @frame.get('thumbnail_file')
@@ -117,7 +117,7 @@ module.exports = class FramelistFrameView extends View
       notes: @frame.get('notes')
     retVal
 
-  afterRender: =>    
+  afterRender: =>
     @$el.find(".notes-field").autogrow()
     @$el.find('.savebtn').button()
     @$el.find('.savebtn').hide()

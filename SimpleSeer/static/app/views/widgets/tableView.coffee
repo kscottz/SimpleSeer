@@ -8,6 +8,10 @@ module.exports = class tableView extends SubView
   emptyCell: ""
   template:template
 
+  events:
+    'click #excel_button':'export'
+    'click #csv_button':'export'
+
   initialize: =>
     @emptyCell = @options.emptyCell if @options.emptyCell
     @columnOrder = @options.columnOrder if @options.columnOrder
@@ -23,6 +27,10 @@ module.exports = class tableView extends SubView
         o = @emptyCell
       newRow[i] = o
     @tableData.push newRow
+    
+  export: (ui) =>
+    @$el.find('input[name="format"]').attr('value',ui.target.value)
+    true
 
   getType: (val) =>
     """
@@ -36,11 +44,17 @@ module.exports = class tableView extends SubView
     val == false || val == ''
 
   afterRender: =>
+    super()
     l = @$el.find('thead :visible th')
     for dn in l
       if dn.innerHTML == "Capture Time"
         dn.innerHTML += " " + new Date().toString().match(/\(.*\)/g)
     @$el.find('.tablesorter').tablesorter({widgets: ['zebra']})
+    js = @rows
+    js.unshift @header
+    $("input[name=rawdata]").attr('value',(JSON.stringify js).replace RegExp(@emptyCell,'g'), '' )
+    #@$el.find(".scrollbar").tinyscrollbar({ axis: 'x'})
+
 
   getRenderData: =>
     retHeader = []
@@ -70,25 +84,7 @@ module.exports = class tableView extends SubView
         a.push @emptyCell
       retRow.push a
 
-    csvString = ''
+    @header = retHeader
+    @rows = retRow
+    return {header:retHeader,row:retRow}
     
-    for csvheader in retHeader
-      csvString += '"'+csvheader+'",'
-    csvString = $("<div/>").html(csvString.slice(0,-1)).text()
-    csvString += "\n"
-      
-    for csvrow in retRow
-      for item in csvrow
-        if item == '---'
-          item = ''
-        csvString += '"'+item+'",'
-      csvString = csvString.slice(0,-1)
-      csvString += "\n"
-    #@exportUrl = @options.parent.filtercollection.getUrl(true, {headers:retHeader})
-    #console.log @exportUrl
-    #@$el.find('#csvlink').attr('href','/downloadFrames/csv')
-    uriContent = "data:text/csv," + encodeURIComponent(csvString)
-    exportUrl = uriContent
-    #console.log @$el.find('#csvlink').attr('href')
-    #@$el.find('#excellink').attr('href','/downloadFrames/excel'+@exportUrl)
-    return {header:retHeader,row:retRow,exportUrl:exportUrl}

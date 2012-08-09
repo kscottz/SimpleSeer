@@ -61,6 +61,7 @@ class ChannelManager(object):
         channel.pop(id(sub_sock), None)
         if not channel:
             self._channels.pop(name, None)
+            
 
 class RealtimeNamespace(BaseNamespace):
 
@@ -83,7 +84,7 @@ class RealtimeNamespace(BaseNamespace):
         socket = self._channel_manager.subscribe(name)
         greenlet = gevent.spawn_link_exception(self._relay, name, socket)
         self._channels[name] = (socket, greenlet)
-
+        
     def _unsubscribe(self, name):
         if name not in self._channels: return
         socket, greenlet = self._channels.pop(name)

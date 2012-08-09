@@ -115,9 +115,8 @@ Handlebars.registerHelper 'featurelist', (features) ->
     return new Handlebars.SafeString("")
   ret = ""
   if features.models[0]
-    keys = features.models[0].tableHeader()
-    values = features.models[0].tableData()
-    """
+    keys = features.models[0].tableHeader() || []
+    values = features.models[0].tableData() || []
     metadata = features.models[0].getPluginMethod(features.models[0].get("featuretype"), 'metadata')
     if metadata
       f = metadata()
@@ -131,12 +130,13 @@ Handlebars.registerHelper 'featurelist', (features) ->
       ret += "</div>"
     """
     i = 0
-    while i < features.models[0].tableHeader().length
+    while i < keys.length
       ret += "<div style=\"clear:both;\">"
       ret += "<p class='item-detail'><span class=\"featureLabel\"></span>" + keys[i] + ":</p>"
       ret += "<p class='item-detail-value'>" + values[i] + "</p>"
       ret += "</div>"
       i++
+    """
   return new Handlebars.SafeString(ret)
 
 # Usage: {{#key_value obj}} Key: {{key}} // Value: {{value}} {{/key_value}}

@@ -1,5 +1,3 @@
-<div id="image-view">
-  <div class="image-view-item">
     <div class="ivi-right">
       <div class="tableSpacerListView">
         <p class="item-detail">Capture Time:</p>
@@ -34,11 +32,9 @@
         </div>
         <div class="zoomer"></div>
         <div class="btnGp">
-          <div class="download"><a href="{{imgfile}}?download=True">Download</a></div>
-          <div class="view action-viewFrame"><span tabindex="0">View</span></div>
+          <div class="download"><a href="/grid/imgfile/{{id}}?download=True">Download</a></div>
+          <div class="view action-viewFrame" data-id="{{id}}">View</div>
           <div class="fullscreen"><a href="#frame/{{id}}">Fullscreen</a></div>
         </div>
       </div>
     </div>
-  </div>
-</div><!-- END IMAGE VIEW ITEM -->

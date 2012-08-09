@@ -25,7 +25,7 @@ class FrameSchema(fes.Schema):
     filter_extra_fields=True
     camera = fev.UnicodeString(not_empty=True)
     metadata = V.JSON(if_empty={}, if_missing={})
-    notes = fev.UnicodeString()
+    notes = fev.UnicodeString(not_empty=True, if_empty="", if_missing="")
 	#TODO, make this feasible as a formencode schema for upload
 
 
@@ -61,8 +61,14 @@ class Frame(SimpleDoc, mongoengine.Document):
     _imgcache = ''
 
     meta = {
-        'indexes': ["capturetime", ('camera', '-capturetime')]
+        'indexes': ["capturetime", "-capturetime", ('camera', '-capturetime')]
     }
+    
+    @classmethod
+    #which fields we care about for Filter.py
+    def filterFieldNames(cls):
+        return ['_id', 'camera', 'capturetime', 'results', 'features', 'metadata', 'notes', 'height', 'width', 'imgfile']
+
 
     @LazyProperty
     def thumbnail(self):
@@ -124,6 +130,8 @@ class Frame(SimpleDoc, mongoengine.Document):
             self.width, self.height, self.camera, capturetime)
         
     def save(self, *args, **kwargs):
+        from SimpleSeer.OLAPUtils import RealtimeOLAP
+        
         #TODO: sometimes we want a frame with no image data, basically at this
         #point we're trusting that if that were the case we won't call .image
         realtime.ChannelManager().publish('frame.', self)
@@ -133,8 +141,7 @@ class Frame(SimpleDoc, mongoengine.Document):
             img = self._imgcache
             if self.clip_id is None:
                 img.getPIL().save(s, "jpeg", quality = 100)
-                self.imgfile.delete()
-                self.imgfile.put(s.getvalue(), content_type = "image/jpg")
+                self.imgfile.replace(s.getvalue(), content_type = "image/jpg")
           
             if len(img._mLayers):
                 if len(img._mLayers) > 1:
@@ -143,8 +150,7 @@ class Frame(SimpleDoc, mongoengine.Document):
                         layer.renderToOtherLayer(mergedlayer)
                 else:
                     mergedlayer = img.dl()
-                self.layerfile.delete()
-                self.layerfile.put(pygame.image.tostring(mergedlayer._mSurface, "RGBA"))
+                self.layerfile.replace(pygame.image.tostring(mergedlayer._mSurface, "RGBA"))
                 #TODO, make layerfile a compressed object
             #self._imgcache = ''
         
@@ -157,6 +163,11 @@ class Frame(SimpleDoc, mongoengine.Document):
             result.capturetime = self.capturetime
             result.frame_id = self.id
             result.save(*args, **kwargs)
+        
+        # Make sure this is something to update
+        if self.results or self.features:    
+            ro = RealtimeOLAP()
+            ro.realtime(self)
         
     def serialize(self):
         s = StringIO()

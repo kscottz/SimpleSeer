@@ -3,6 +3,8 @@ import threading
 
 import gevent
 import guppy
+import os.path
+import warnings
 
 class Command(object):
     'A simpleseer subcommand'
@@ -19,10 +21,10 @@ class Command(object):
             from gevent import monkey
             monkey.patch_all()
             gevent_zeromq.monkey_patch()
+        self._configure_logging()
         # These imports need to happen *after* monkey patching
         from SimpleSeer.Session import Session
         from SimpleSeer import models as M
-        self._configure_logging()
         self.session = Session(options.config)
         if self.remote_seer:
             from SimpleSeer.SimpleSeer import SimpleSeer as SS
@@ -39,7 +41,11 @@ class Command(object):
         import logging
         import logging.config
         if self.options.logging:
-            logging.config.fileConfig(self.options.logging)
+            if os.path.exists(self.options.logging):
+                logging.config.fileConfig(self.options.logging)
+            else:
+                warnings.warn("Could not find logging configuration %s, defaulting to basic config" % self.options.logging)
+                logging.basicConfig()
         else:
             logging.basicConfig()
         self.log = logging.getLogger(__name__)

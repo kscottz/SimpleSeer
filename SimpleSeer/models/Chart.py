@@ -7,6 +7,8 @@ from formencode import validators as fev
 from formencode import schema as fes
 from SimpleSeer import validators as V
 
+from calendar import timegm
+
 from .OLAP import OLAP
 
 log = logging.getLogger(__name__)
@@ -90,11 +92,12 @@ class Chart(SimpleDoc, mongoengine.Document):
         
         for r in results:
             # TODO Make this more generic than just capturetime
-            if 'capturetime' in r:
-                if r['capturetime'] is not None:
-                    r['capturetime'] = int(float(r['capturetime'].strftime('%s.%f')) * 1000)
-                else:
-                    r['capturetime'] = 0
+            # Capturetimes should now come from filter in epoch seconds already
+            #if 'capturetime' in r:
+            #    if r['capturetime'] is not None:
+            #        r['capturetime'] = timegm(r['capturetime'].timetuple()) * 1000
+            #    else:
+            #        r['capturetime'] = 0
             thisData = [r.get(d, 0) for d in self.dataMap]
             thisMeta = [r.get(m, 0) for m in self.metaMap]
             
@@ -142,4 +145,39 @@ class Chart(SimpleDoc, mongoengine.Document):
         
         return chartData
 
-    
+
+    def chartMeta(self):
+        meta = {'name': self.name,
+                'olap': self.olap,
+                'chartid': self.chartid,
+                'style': self.style,
+                'color': self.color,
+                'colormap': self.colormap,
+                'labelmap': self.labelmap,
+                'minval': self.minval,
+                'maxval': self.maxval,
+                'xTitle': self.xTitle,
+                'yTitle': self.yTitle,
+                'xtype': self.xtype,
+                'accumulate': self.accumulate,
+                'renderorder': self.renderorder,
+                'halfsize': self.halfsize,
+                'realtime': self.realtime,
+                'dataMap': self.dataMap,
+                'metaMap': self.metaMap}
+
+        return meta
+
+    def chartData(self, filter_params = []):
+        # Get the OLAP and its data
+        o = OLAP.objects(name=self.olap)
+        if len(o) == 1:
+            o = o[0]
+            data = o.execute(filter_params)
+            # TODO: Need to work with jim to do handoff to temp olap for realtime
+        else:
+            log.warn("Found %d OLAPS in query for %s" % (len(o), o))
+            data = []
+        
+        return self.mapData(data)
+        

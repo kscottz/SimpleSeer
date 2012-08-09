@@ -19,8 +19,6 @@ from .service import SeerProxy2
 from .Session import Session
 from .Filter import Filter
 
-from .Filter import Filter
-
 log = logging.getLogger()
 
 class route(object):
@@ -48,7 +46,8 @@ def sio(path):
 
 @route('/')
 def index():
-    return redirect('/index.html')
+    #return redirect('/index.html')
+    return open(Session().web['static']['/'] + '/index.html').read()
 
 @route('/plugins.js')
 def plugins():
@@ -112,76 +111,62 @@ def frames():
         earliest_date = calendar.timegm(earliest_date.timetuple())
     return dict(frames=frames, total_frames=total_frames, earliest_date=earliest_date)
 
-	
+    
 @route('/getFrames/<filter_params>', methods=['GET'])
 @util.jsonify
 def getFrames(filter_params):
-	from .base import jsondecode
-	from HTMLParser import HTMLParser
-	
-	# filter_params should be in the form of a json encoded dicts
-	# that probably was also html encoded 
-	p = HTMLParser()
-	nohtml = str(p.unescape(filter_params))
-	allparams = jsondecode(nohtml)
-	
-	limit = allparams['limit']
-	skip = allparams['skip']
-	
-	if 'sortinfo' in allparams:
-		sortinfo = allparams['sortinfo']
-	else:
-		sortinfo = {}
-		
-	query = allparams['query']
-	
-	f = Filter()
-	total_frames, frames = f.getFrames(query, limit=limit, skip=skip, sortinfo=sortinfo)
-	
-	retVal = dict(frames=frames, total_frames=total_frames)
-	
-	if retVal:
-		return retVal
-	else:
-		return {frames: None, 'error': 'no result found'}
-		
-		 
-@route('/downloadFrames/<result_format>/<filter_params>', methods=['GET'])
-def downloadFrames(result_format, filter_params):
-	from .base import jsondecode
-	from HTMLParser import HTMLParser
-	
-	# filter_params should be in the form of a json encoded dicts
-	# that probably was also html encoded 
-	p = HTMLParser()
-	nohtml = str(p.unescape(filter_params))
-	allparams = jsondecode(nohtml)
-	
-	limit = allparams['limit']
-	skip = allparams['skip']
-	
-	if 'sortinfo' in allparams:
-		sortinfo = allparams['sortinfo']
-	else:
-		sortinfo = {}
-	
-	query = allparams['query']
-	
-	f = Filter()
-	total_frames, frames = f.getFrames(query, limit=limit, skip=skip, sortinfo=sortinfo, dictOutput=True)
-	
-	if result_format == 'csv':
-		resp = make_response(f.toCSV(frames), 200)
-		resp.headers['Content-Type'] = 'text/csv'
-		resp.headers['Content-disposition'] = 'attachment; filename="frames.csv"'
-	elif result_format == 'excel':
-		resp = make_response(f.toExcel(frames), 200)
-		resp.headers['Content-Type'] = 'application/vnd.ms-excel'
-		resp.headers['Content-disposition'] = 'attachment; filename="frames.xls"'
-	else:
-		return 'Unknown format', 404
-	return resp
-	
+    from .base import jsondecode
+    from HTMLParser import HTMLParser
+    
+    # filter_params should be in the form of a json encoded dicts
+    # that probably was also html encoded 
+    p = HTMLParser()
+    nohtml = str(p.unescape(filter_params))
+    allparams = jsondecode(nohtml)
+    
+    limit = allparams['limit']
+    skip = allparams['skip']
+    
+    if 'sortinfo' in allparams:
+        sortinfo = allparams['sortinfo']
+    else:
+        sortinfo = {}
+        
+    query = allparams['query']
+    
+    f = Filter()
+    total_frames, frames = f.getFrames(query, limit=limit, skip=skip, sortinfo=sortinfo)
+    
+    retVal = dict(frames=frames, total_frames=total_frames)
+    
+    if retVal:
+        return retVal
+    else:
+        return {frames: None, 'error': 'no result found'}
+        
+         
+@route('/downloadFrames', methods=['GET', 'POST'])
+def downloadFrames():
+    from .base import jsondecode
+    
+    params = request.values.to_dict()
+    rawdata = jsondecode(params['rawdata'])
+    result_format = params['format']
+    
+    f = Filter()
+    
+    if result_format == 'csv':
+        resp = make_response(f.toCSV(rawdata), 200)
+        resp.headers['Content-Type'] = 'text/csv'
+        resp.headers['Content-disposition'] = 'attachment; filename="frames.%s.csv"' % str(datetime.now())
+    elif result_format == 'excel':
+        resp = make_response(f.toExcel(rawdata), 200)
+        resp.headers['Content-Type'] = 'application/vnd.ms-excel'
+        resp.headers['Content-disposition'] = 'attachment; filename="frames.%s.xls"' % str(datetime.now())
+    else:
+        return 'Unknown format', 404
+    return resp
+    
 @route('/getFilter/<filter_type>/<filter_name>/<filter_format>', methods=['GET'])
 @util.jsonify
 def getFilter(filter_type, filter_name, filter_format):
@@ -189,21 +174,21 @@ def getFilter(filter_type, filter_name, filter_format):
     # formats: numeric, string, autofill, datetime
     # types: measurement, frame, framefeature
 
-	f = Filter()
-	retVal = f.checkFilter(filter_type, filter_name, filter_format)
-	
-	if retVal:
-		return retVal
-	else:
-		return {'error': 'no result found'}
+    f = Filter()
+    retVal = f.checkFilter(filter_type, filter_name, filter_format)
+    
+    if retVal:
+        return retVal
+    else:
+        return {'error': 'no result found'}
     
 @route('/features', methods=['GET'])
 @util.jsonify
-def features():	
-	f = Filter()
-	return f.getFilterOptions()
-	
-	
+def features():    
+    f = Filter()
+    return f.getFilterOptions()
+    
+    
 #TODO, abstract this for layers and thumbnails        
 @route('/grid/imgfile/<frame_id>', methods=['GET'])
 def imgfile(frame_id):
@@ -303,7 +288,7 @@ def videofeed(width=0, camera=0):
 
 @route('/videofeed-width<int:width>.mjpeg', methods=['GET'])
 def videofeed_width_only(width=0):
-	return videofeed(width)
+    return videofeed(width)
 
 @route('/videofeed-camera<int:camera>.mjpeg', methods=['GET'])
 def videofeed_camera_only(camera=0):
@@ -364,7 +349,7 @@ def inspection_add():
     try:
         seer = util.get_seer()
         M.Inspection(
-            name = params.get("name"),	
+            name = params.get("name"),    
             camera = params.get("camera"),
             method = params.get("method"),
             parameters = json.loads(params.get("parameters"))).save()
@@ -502,12 +487,29 @@ def settings():
     text = Session().get_config()
     return {"settings": text }
 
+@route('/confirmTransient/<channel_name>', methods=['GET'])
+def confirmTransient(channel_name):
+    from .OLAPUtils import OLAPFactory
+    of = OLAPFactory()
+    of.confirmTransient(channel_name)
+    return ""
+
 @route('/chart/<chart_name>', methods=['GET'])
 @util.jsonify
 def chart(chart_name):
     c = M.Chart.objects.get(name = chart_name)
     
     return c.createChart()
+
+@route('/chart/data/<chart_name>/<filter_params>', methods=['GET'])
+def chart_data(chart_name, filter_params):
+    c = M.Chart.objects.get(name=chart_name)
+    return c.chartData(filter_params)
+
+@route('/chart/meta/<chart_name>/', methods=['GET'])
+def chart_meta(chart_name):
+    c = M.Chart.objects.get(name=chart_name)
+    return c.chartMeta()
 
 @route('/chart/<chart_name>/since/<timestamp>', methods=['GET'])
 @util.jsonify

@@ -1,7 +1,9 @@
 from .models.OLAP import OLAP
+from .models.Chart import Chart
 from .models.Measurement import Measurement
 from .models.Inspection import Inspection
-from .models.Result import Result
+
+from .Filter import Filter
 
 from gevent import Greenlet, sleep
 from datetime import datetime, timedelta
@@ -10,42 +12,100 @@ from time import mktime
 from .util import utf8convert
 from .realtime import ChannelManager
 
+from random import randint
+import pandas as pd
+
 import logging
 log = logging.getLogger(__name__)
 
 
 class OLAPFactory:
     
+    @classmethod
+    def confirmTransient(self, chartName):
+        chart = Chart.objects(name=chartName)[0]
+        olap = OLAP.objects(name=chart.olap)[0]
+        olap.confirmed = True
+        olap.save()
+    
+    def createTransient(self, filters, originalChart):
+        # A transient OLAP is one that should be delted when no subscriptions are listening
+        # This is needed for OLAPs that publish realtime but are the result of filters
+        
+        from .models.Chart import Chart
+        
+        # First, create the core OLAP
+        originalOLAP = OLAP.objects(name = originalChart.olap)[0]
+        o = self.fromFilter(filters, originalOLAP)
+        o.transient = True
+        o.confirmed = True
+        o.save()
+        
+        # Create the chart to point to it
+        # For a chart only used for realtime, we realy only care about the data maps
+        c = Chart()
+        c.name = originalChart.name + '_' + str(randint(1, 1000000))
+        c.metaMap = originalChart.metaMap
+        c.dataMap = originalChart.dataMap
+        c.olap = o.name
+        c.save()
+    
+    def fromFilter(self, filters, oldOLAP = None):
+        
+        newOLAP = OLAP()
+        if oldOLAP:
+            newOLAP.olapFilter = oldOLAP.mergeParams(filters)
+        else:
+            newOLAP.olapFilter = filters
+            
+        return self.fillOLAP(newOLAP)
+    
+    def fromFields(self, fields):
+        # Create an OLAP object from a list of fields desired
+        # Each field should be specified in the same was as Filter fields
+        #   type: one of (frame, framefeature, measurement)
+        #   name: if a frame, specify the field name
+        #         otherwise use dotted notation for the frame/measurement name.field name
+        
+        for f in fields:
+            f['exists'] = 1
+        
+        # Put together the OLAP
+        o = OLAP()
+        o.olapFilter = fields
+        
+        # Fill in the rest with default values
+        return self.fillOLAP(o)
+        
     def fromObject(self, obj):
         # Create an OLAP object from another query-able object
         
         # Find the type of object and 
         # get a result to do some guessing on the data types
+        
+        filters = []
+        
+        f = Filter()
+        inspKeys, measKeys = f.keyNamesHash()
+        
         if type(obj) == Measurement:
-            queryType = 'measurement'
-            r = Result.objects(measurement = obj.id).limit(1)[0]
+            filterKeys = measKeys
+            filterType = 'measurement'
         elif type(obj) == Inspection:
-            queryType = 'inspection'
-            r = Result.objects(measurement = obj.id).limit(1)[0]
+            filterKeys = inspKeys
+            filterType = 'framefeature'
         else:
             log.warn('OLAP factory got unknown type %s' % str(type(obj)))
+            filterKeys = []
+            filterType = 'unknown'
+            
+        for key in filterKeys:
+            filters.add({'type': filterType, 'name': obj.name + '.' + key, 'exists':1})
         
-        
-        # Setup the fields.  Begin by assuming always want capturetime and id's of measurement, inspection, frame
-        fields = ['capturetime', 'measurement', 'inspection', 'frame']
-        
-        # If the string value is set, assume want to use it.  Otherwise, numeric
-        if (r.string):
-            fields.append('string')
-        else:
-            fields.append('numeric')
         
         # Put together the OLAP
         o = OLAP()
-        o.name = obj.name
-        o.queryType = queryType
-        o.queryId = obj.id
-        o.fields = fields
+        o.olapFilter = filters
         
         # Fill in the rest with default values
         return self.fillOLAP(o)
@@ -54,40 +114,18 @@ class OLAPFactory:
     def fillOLAP(self, o):
         # Fills in default values for undefined fields of an OLAP
         
-        # First, need to know how results are found
-        if not o.queryType:
-            o.queryType = 'measurement'
-        
-        # Get an object of that type for reference
-        if o.queryType == 'measurement':
-            objType = Measurement
-        elif o.queryType == 'inspection':
-            objType = Inspection
-
-        # If a queryID specified, base everything off that object
-        # Otherwise, base off the first object of that type
-        if o.queryId:
-            obj = objType.objects(id=o.queryId)
+        if o.olapFilter:
+            o.name = o.olapFilter[0]['name'] + '_' + str(randint(1, 1000000))
         else:
-            obj = objType.objects[0]
-            o.queryId = obj.id
-        
-        # Create a name based off the object's name and random number
-        if not o.name:
-            from random import randint
-            o.name = obj.name + ' OF ' + str(randint(1, 1000000))
+            o.name = 'GeneratedOLAP_' + str(randint(1, 1000000))
             
         # Default to max query length of 1000
         if not o.maxLen:
             o.maxLen = 1000
             
-        # The standard set of fields per query
-        if not o.fields:
-            o.fields = ['capturetime', 'string', 'measurement', 'inspection', 'frame']
-            
         # No mapping of output values
         if not o.valueMap:
-            o.valueMap = {}
+            o.valueMap = []
     
         # No since constratint
         if not o.since:
@@ -97,10 +135,6 @@ class OLAPFactory:
         if not o.before:
             o.before = None
             
-        # No custom filters
-        if not o.customFilter:
-            o.customFilter = {}
-    
         # Finally, run once to see if need to aggregate
         if not o.statsInfo:
             results = o.execute()
@@ -109,118 +143,104 @@ class OLAPFactory:
             if len(results) > o.maxLen:
                 self.autoAggregate(results, autoUpdate=False)
             
-        
         # Return the result
         # NOTE: This OLAP is not saved 
         return o
+        
+
     
-
-class OLAPFunctions():
-    
-    def timeSinceUQ(self, results, key):
-        from calendar import timegm
-        from operator import itemgetter
-        
-        sortedResults = sorted(results, key=itemgetter(key))
-        uqScore = sortedResults[int(.75 * len(sortedResults))][key]
-
-        lastTime = None
-        for r in results:
-            if r[key] >= uqScore:
-                lastTime = r['capturetime']
-                r[key] = 0
-            elif lastTime is not None:
-                r[key] = (r['capturetime'] - lastTime).total_seconds()
-                
-        return results
-                
-    def timeOfUQ(self, results, key):
-        from calendar import timegm
-        from operator import itemgetter
-        
-        sortedResults = sorted(results, key=itemgetter(key))
-        uqScore = sortedResults[int(.75 * len(sortedResults))]
-
-        startTime = None
-        duration = None
-        for r in results:
-            if r[key] >= uqScore:
-                if startTime == None:
-                    startTime = r['capturetime']
-                duration = (r['capturetime'] - startTime).total_seconds()
-            elif duration is not None:
-                startTime = None
-                r[key] = duration
-            
-        return results
-        
-
 class RealtimeOLAP():
     
-    def realtime(self, res):
-
-    
-        from .models.Chart import Chart
+    def realtime(self, frame):
         
-        olaps = OLAP.objects(__raw__={'$or': [ {'queryType': 'measurement_id', 'queryId': res.measurement_id}, 
-                                               {'queryType':'inspection_id', 'queryId': res.inspection_id}
-                                             ]}) 
+        charts = Chart.objects()
         
-        for o in olaps:
-            # If no statistics, just send result on its way
-            if not o.statsInfo:
+        # Functions below assume frame is a dict not an object 
+        frame = frame.__dict__['_data']
+        
+        for chart in charts:
+            # If no statistics, send result on its way
+            # If there are stats, it will be handled later by stats scheduler
+            olap = OLAP.objects(name=chart.olap)[0]
+            if not olap.statsInfo:
+                filters = olap.olapFilter
+                olapOK = True
                 
-                data = self.resToData(o, res)
-                
-                
-                if len(data) > 0:
-                    # Long term fix: only publish to charts that are listened to
-                    cs = Chart.objects(olap = o.name)
+                i = 0
+                while olapOK and i < len(filters):
+                    f = filters[i]
+                    i += 1
                     
-                    for c in cs:
-                        thisData = data.copy()
-                        chartData = c.mapData([thisData])
-                        self.sendMessage(o, chartData, c.name)
-    
-    def resToData(self, o, res):
-        
-        # Have to enforce: filter
-        results = {}
-        
-        sinceok = (not o.since) or (res.capturetime > o.since)
-        beforeok = (not o.before) or (res.capturetime < o.before)
-        if not o.customFilter:
-            filterok = True
-        else:
-            key = o.customFilter['field']
-            val = o.customFilter['val']
-            if res[key] == val:
-                filterok = True
-            else:
-                filterok = False
-        
-        if sinceok and beforeok and filterok:
-            
-            # Use only the specified fields
-            for f in o.fields:
-                results[f] = res.__getattribute__(f) 
+                    if f['type'] == 'measurement':
+                        name, dot, field = f['name'].partition('.')
+                        f['name'] = field
+                        part = False
+                        for r in frame['results']:
+                            part = part or r._data['measurement_name'] == name and self.checkFilter(f, r._data)
+                        olapOK = part
+                    elif f['type'] == 'framefeature':
+                        name, dot, field = f['name'].partition('.')
+                        f['name'] = field
+                        part = False
+                        for fe in frame['features']:
+                            part = part or fe._data['featuretype'] == name and self.checkFilter(f, fe._data)
+                        olapOK = part
+                    else:
+                        olapOK = self.checkFilter(f, frame)
                 
-                # Map the values, if applicable
-                if (o.valueMap) and (o.valueMap['field'] == f):
-                    results[f] = o.valueMap.get(results[f], o.valueMap['default']) 
+                if olapOK:
+                    f = Filter()
+                    frame = f.unEmbed(frame)
+                    frame = f.flattenFrame([frame])
+                    data = olap.doPostProc(frame)
+                    data = chart.mapData(data)
+                    self.sendMessage(chart, data)
+    
+    def checkFilter(self, filt, frame):
+        keyParts = filt['name'].split('.')
+        value = self.getFrameField(frame, keyParts)
         
-            results = o.doPostProc(results, True)
+        if 'exists' in filt and value:
+            return True
+        elif 'eq' in filt:
+            return filt['eq'] == value
+        elif 'gt' in filt or 'lt' in filt:
+            part = True
+            if 'gt' in filt:
+                part = part and filt['gt'] == value
+            if 'lt' in filt:
+                part = part and filt['lt'] == value
+            return part
+        else:
+            log.info('Unknown realtime filter parameter')
+            return True
         
-        return results
-
-    def sendMessage(self, o, data, subname):
+    def getFrameField(self, field, keyParts):
+        # This function recursively pulls apart the key parts to unpack the hashes and find the actual value
+        
+        # Need special handling for results and features
+        if keyParts[0] == 'results' or keyParts[0] == 'features':
+            embeddedDocs = field[keyParts.pop()]
+            docBool = False
+            for d in embeddedDocs:
+                # work off copy to preserve original for future iterations of loop
+                keys = keyParts[:]
+                docBool = docBool or self.getFrameField(d._data, keys)
+        
+        if len(keyParts) == 1:
+            return field.get(keyParts[0], None)
+        else:
+            return self.getFrameField(field.get(keyParts.pop(0), {}), keyParts) 
+                
+    def sendMessage(self, chart, data):
+        
         if (len(data) > 0):
             msgdata = dict(
-                olap = str(o.name),
+                chart = str(chart.name),
                 data = data)
-            
-            olapName = 'Chart/%s/' % utf8convert(subname) 
-            ChannelManager().publish(olapName, dict(u='data', m=msgdata))
+        
+            chartName = 'Chart/%s/' % utf8convert(chart.name) 
+            ChannelManager().publish(chartName, dict(u='data', m=msgdata))
             
 
 class ScheduledOLAP():
@@ -234,7 +254,9 @@ class ScheduledOLAP():
         glets.append(Greenlet(self.skedLoop, 'minute'))
         glets.append(Greenlet(self.skedLoop, 'hour'))
         glets.append(Greenlet(self.skedLoop, 'day'))
-    
+        
+        glets.append(Greenlet(self.checkTransient))
+        
         # Start all the greenlets
         for g in glets:
             g.start()
@@ -242,8 +264,34 @@ class ScheduledOLAP():
         # Join all the greenlets
         for g in glets:
             g.join()
+    
+    
+    def checkTransient(self):
+        while True:
+            # First delete transients that are inactive
+            olds = OLAP.objects(transient = True, confirmed = False)
+            for o in olds:
+                c = Chart.objects(olap=o.name)[0]
+                c.delete()
+                o.delete()
+                log.info('Deleted transient OLAP: %s' % o.name)
+                log.info('Deleted associated chart: %s' % c.name)
         
-        
+                
+            # Request updates on status of active olaps
+            active = OLAP.objects(transient = True)
+            for a in active:
+                # Set status to inactive until a client responds that it is in use
+                a.confirmed = False
+                a.save()
+                
+                # Publish a request that any listening clients confirm they are listening
+                chart = Chart.objects(olap=a.name)[0]
+                chartName = 'Chart/%s/' % utf8convert(chart.name) 
+                ChannelManager().publish(chartName, dict(u='data', m='ping'))
+            
+            sleep(3600)
+            
     def skedLoop(self, interval):
         
         from datetime import datetime

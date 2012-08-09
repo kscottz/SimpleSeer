@@ -1,5 +1,5 @@
 $.widget("ui.zoomify", {
-  options: {image: "", zoom: 1, x: 0, y: 0, min: 100, max: 400, height: 0},
+  options: {realWidth: 0, image: "", zoom: 1, x: 0, y: 0, min: 100, max: 400, height: 0},
   image: {},
   loaded: false,
   viewport: {x: 0, y:0, zoom: 1},
@@ -67,11 +67,20 @@ $.widget("ui.zoomify", {
     element.addClass("ui-zoomify");
 
     self.viewport = {zoom: options.zoom, x: options.x, y: options.y};
-    
+  
     var content = $('<div class="window"><div class="view"><div class="frame"></div><img class="display" src="'+options.image+'"></div></div><div class="settings"><input type="text" value=""><div class="slider"></div></div>').appendTo(element);
     content.find("input").attr("value", self.viewport.zoom * 100 + "%");
     content.find(".display").load(function() { self.loaded = true; self.updateDisplay(); }).bind('dragstart', function(event) { event.preventDefault(); });;
 
+    stuff = {width: element.find(".view").width(), height: options.realHeight * (element.find(".view").width() / options.realWidth)}
+    content.find(".view").attr("width", stuff.width).attr("height", stuff.height);
+    
+    content.find(".view").click(function(e) {
+      self.viewport.x = (e.offsetX || e.originalEvent.layerX - $(e.target).position().left) - content.find(".frame").width() / 2;
+      self.viewport.y = (e.offsetY || e.originalEvent.layerY - $(e.target).position().top) - content.find(".frame").height() / 2;
+      self.updateDisplay();
+    });
+    
     content.find(".frame").draggable({
       containment: "parent",
       drag: function(event, ui) {
@@ -95,7 +104,7 @@ $.widget("ui.zoomify", {
     content.find("input").keypress(function(e) {
       if(e.which == 13){
         var input = $(this);
-        var value = String(Math.max(input.attr("value"), self.options.min));
+        var value = String(Math.max(input.attr("value").replace("%", ""), self.options.min));
         
         // Set the slider's value
         $("#control .slider").slider("option", "value", value.replace(/\%/g, ""));
