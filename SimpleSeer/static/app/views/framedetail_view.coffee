@@ -151,6 +151,8 @@ module.exports = class FrameDetailView extends View
         max: 400
         min: scaleFixed * 100
         zoom: scaleFixed
+        realWidth: @model.get("width")
+        realHeight: @model.get("height")
         image: @model.get('imgfile')
         height: (displayHeight / @model.get("height")) / scale
         update: (e, ui) =>
