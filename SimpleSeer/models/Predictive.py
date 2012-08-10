@@ -221,14 +221,15 @@ class NelsonRules:
         
         upper = mean + sd
         lower = mean - sd
-        
-        for i in range(len(points)-14):
-            above = 0
-            for x in range(i,i+15):
-                if points[x] < upper and points[x] > lower:
-                    above += 1
+        run = 0
             
-            if above >= 15:
+        for i in range(len(points)):
+            if points[i] > upper or points[i] < lower:
+                run = 0
+            
+            run += 1
+            
+            if run == 15:
                 return True
         
         return False
@@ -242,13 +243,15 @@ class NelsonRules:
         upper = mean + sd
         lower = mean - sd
         
-        for i in range(len(points)-7):
-            within = 0
-            for x in range(i,i+8):
-                if points[x] < upper and points[x] > lower:
-                    within += 1
+        run = 0
+        
+        for i in range(len(points)):
+            if points[i] < upper and points[i] > lower:
+                run = 0
             
-            if within == 0:
+            run += 1
+            
+            if run == 8:
                 return True
         
         return False
