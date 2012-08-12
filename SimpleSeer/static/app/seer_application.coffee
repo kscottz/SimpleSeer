@@ -1,6 +1,9 @@
 # The application bootstrapper.
 module.exports = SeerApplication =
-  initialize: ->
+  settings: {}
+  _init: (settings) ->
+    #console.info 'in SeerApplication'
+    @settings = _.extend @settings, settings
     if @settings.mongo.is_slave
       $(".notebook").hide()
 			
@@ -45,12 +48,11 @@ module.exports = SeerApplication =
     @measurements.fetch()
     @frames = new Frames()
     @framesets = new FrameSets()
-    TabContainer = require "views/tabcontainer_view"
-    @framelistView = new TabContainer({model:Frame,tabs:'tabs'})
+    #TabContainer = require "views/tabcontainer_view"
+    #@framelistView = new TabContainer({model:Frame,tabs:'tabs'})
 
     #@lastframes = new Frames()
 
-    @homeView = new HomeView()
     #@framelistView = new FramelistView()
 
     # set up the client name
@@ -66,8 +68,6 @@ module.exports = SeerApplication =
 
     # Instantiate the router
     @router = new Router()
-    # Freeze the object
-    Object.freeze? this
 
   _serveralert: (msg) ->
     window.SimpleSeer.alert(msg['data']['message'], msg['data']['severity'])
