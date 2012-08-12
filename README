@@ -57,11 +57,11 @@ To run the installer:
 
 	wget https://github.com/ingenuitas/SimpleSeer/zipball/master -O SimpleSeer.zip; unzip SimpleSeer.zip; mv ingenuitas-* SimpleSeer;
 	cd SimpleSeer
-	sh scripts/install.sh
+	sh scripts/setup.sh
 
 or manually install with these commands from WITHIN the SimpleSeer directory:
 
-	sudo apt-get install python-dev python-setuptools python-pip libzmq-dev mongodb nodejs npm build-essential python-gevent libevent-dev supervisor ipython-notebook libvpx-dev libvpx1 swig subversion
+	sudo apt-get install python-dev python-setuptools python-pip libzmq-dev nodejs npm build-essential python-gevent libevent-dev supervisor ipython-notebook swig libvpx-dev subversion python-pastescript ipython python-opencv python-scipy python-numpy python-pygame $ sudo apt-get install libamd2.2.0 libblas3gf libc6 libgcc1 libgfortran3 liblapack3gf libumfpack5.4.0 libstdc++6 build-essential gfortran libatlas-sse2-dev python-all-dev libsdl1.2-dev libsmpeg-dev
 	sudo npm install -g brunch
 	sudo pip install -r pip.requirements
 	sudo easy_install coffeescript
