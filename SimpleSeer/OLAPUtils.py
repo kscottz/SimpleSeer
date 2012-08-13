@@ -176,26 +176,29 @@ class RealtimeOLAP():
                         f['name'] = field
                         part = False
                         for r in frame['results']:
-                            part = part or r._data['measurement_name'] == name and self.checkFilter(f, r._data)
+                            part = part or (r._data['measurement_name'] == name and self.checkFilter(f, r._data))
                         olapOK = part
                     elif f['type'] == 'framefeature':
                         name, dot, field = f['name'].partition('.')
                         f['name'] = field
                         part = False
                         for fe in frame['features']:
-                            part = part or fe._data['featuretype'] == name and self.checkFilter(f, fe._data)
+                            part = part or (fe._data['featuretype'] == name and self.checkFilter(f, fe._data))
                         olapOK = part
                     else:
                         olapOK = self.checkFilter(f, frame)
                 
                 if olapOK:
+                    data = frame.copy()
                     f = Filter()
-                    frame = f.unEmbed(frame)
-                    frame = f.flattenFrame([frame])
-                    data = olap.doPostProc(frame)
+                    data = f.unEmbed(data)
+                    data = f.flattenFrame([data])
+                    data = pd.DataFrame(data)
+                    data = olap.doPostProc(data)
+                    data = [v for v in data.transpose().to_dict().values()]
                     data = chart.mapData(data)
                     self.sendMessage(chart, data)
-    
+                
     def checkFilter(self, filt, frame):
         keyParts = filt['name'].split('.')
         value = self.getFrameField(frame, keyParts)
