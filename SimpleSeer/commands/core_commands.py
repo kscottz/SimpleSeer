@@ -75,7 +75,10 @@ def WebCommand(self):
     from pymongo import Connection, DESCENDING, ASCENDING
 
     # Ensure indexes created for filterable fields
-    db = Connection().default
+    dbName = self.session.database
+    if not dbName:
+        dbName = 'default'
+    db = Connection()[dbName]
     for f in self.session.ui_filters:
         db.frame.ensure_index([(f['filter_name'], ASCENDING), (f['filter_name'], DESCENDING)])
     

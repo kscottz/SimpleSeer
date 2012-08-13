@@ -9,7 +9,9 @@ module.exports = class SubView extends View
   render: () =>
     if @options.append
       if !@options.parent.$('#'+@options.append).length
-        @options.parent.$(@options.selector).append('<div id="'+@options.append+'" />')
+        tagName = @tagName || 'div'
+        className = @className || ''
+        @options.parent.$(@options.selector).append('<'+tagName+' class="'+className+'" id="'+@options.append+'" />')
       @setElement @options.parent.$ '#'+@options.append
     else
       @setElement @options.parent.$ @options.selector
