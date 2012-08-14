@@ -132,9 +132,6 @@ class Frame(SimpleDoc, mongoengine.Document):
     def save(self, *args, **kwargs):
         from SimpleSeer.OLAPUtils import RealtimeOLAP
         
-        #TODO: sometimes we want a frame with no image data, basically at this
-        #point we're trusting that if that were the case we won't call .image
-        realtime.ChannelManager().publish('frame.', self)
 
         if self._imgcache != '':
             s = StringIO()
@@ -168,6 +165,10 @@ class Frame(SimpleDoc, mongoengine.Document):
         if self.results or self.features:    
             ro = RealtimeOLAP()
             ro.realtime(self)
+        #TODO: sometimes we want a frame with no image data, basically at this
+        #point we're trusting that if that were the case we won't call .image
+        realtime.ChannelManager().publish('frame/', self)
+
         
     def serialize(self):
         s = StringIO()
