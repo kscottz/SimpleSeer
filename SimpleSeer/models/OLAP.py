@@ -109,13 +109,15 @@ class OLAP(SimpleDoc, mongoengine.Document):
         
     def doPostProc(self, results):
         # Remap fields if necessary
-        for vmap in self.valueMap:
-            field = vmap['field']
-            default = vmap['default']
-            newvals = vmap['valueMap']
-            
-            results[field] = results[field].apply(lambda x: newvals.get(x, default))
         
+        if len(results) > 0:
+            for vmap in self.valueMap:
+                field = vmap['field']
+                default = vmap['default']
+                newvals = vmap['valueMap']
+                
+                results[field] = results[field].apply(lambda x: newvals.get(x, default))
+            
         return results
 
     def doStats(self, results):

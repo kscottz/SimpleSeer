@@ -189,8 +189,8 @@ class RealtimeOLAP():
                         olapOK = self.checkFilter(f, frame)
                 
                 if olapOK:
-                    f = Filter()
                     data = frame.copy()
+                    f = Filter()
                     data = f.unEmbed(data)
                     data = f.flattenFrame([data])
                     data = pd.DataFrame(data)
@@ -198,7 +198,7 @@ class RealtimeOLAP():
                     data = [v for v in data.transpose().to_dict().values()]
                     data = chart.mapData(data)
                     self.sendMessage(chart, data)
-    
+                
     def checkFilter(self, filt, frame):
         keyParts = filt['name'].split('.')
         value = self.getFrameField(frame, keyParts)

@@ -103,6 +103,13 @@ class Chart(SimpleDoc, mongoengine.Document):
             
             data.append({'d': thisData, 'm': thisMeta})
             
+        if len(data) == 0:
+            thisData = [0 for d in self.dataMap]
+            thisMeta = [0 for d in self.metaMap]
+            
+            data.append({'d': thisData, 'm': thisMeta})
+            data.append({'d': thisData, 'm': thisMeta})
+            
         return data
     
     def createChart(self, **kwargs):
