@@ -20,6 +20,9 @@ module.exports = class DateTimeFilterView extends _filter
   afterRender: () =>
     tf = @$el.find('input[name=time_from]').datetimepicker {timeFormat: "h:mm tt", onClose: @setValue, ampm:true}
     tt = @$el.find('input[name=time_to]').datetimepicker {timeFormat: "h:mm tt", onClose: @setValue, ampm:true}
+    #console.log @options.params.constraints.min-application.timeOffset
+    #begin24 = (@options.params.constraints.min-application.timeOffset) % 86400000
+    #end24 = begin24 + 86400000
     tf.datepicker( "setDate",  new Date(@options.params.constraints.min-application.timeOffset))
     tt.datepicker( "setDate",  new Date(@options.params.constraints.max-application.timeOffset))
     #console.log @options.params.constraints

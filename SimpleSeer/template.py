@@ -60,6 +60,18 @@ class SimpleSeerProjectTemplate(Template):
             json.dumps(package, indent=2))
 
         # Copy (built) seer.js & seer.css
+        dn = open("/dev/null")
+        #print "Ignoring in git: {0}".format(src_public / 'javascripts/seer.js')
+        subprocess.call(['git','rm','--cached',src_public / 'javascripts/seer.js'],stderr=dn)
+        #print "Ignoring in git: {0}".format(tgt_public / 'javascripts/app.js')
+        subprocess.call(['git','rm','--cached',tgt_public / 'javascripts/app.js'],stderr=dn)
+        #print "Ignoring in git: {0}".format(tgt_public / 'javascripts/vendor.js')
+        subprocess.call(['git','rm','--cached',tgt_public / 'javascripts/vendor.js'],stderr=dn)
+        
+        #print "Ignoring in git: {0}".format(src_public / 'stylesheets/seer.css')
+        subprocess.call(['git','rm','--cached',src_public / 'stylesheets/seer.css'],stderr=dn)
+        #print "Ignoring in git: {0}".format(tgt_brunch / 'vendor/stylesheets/seer.css')
+        #subprocess.call(['git','rm','--cached',tgt_brunch / 'vendor/stylesheets/seer.css'])
         overwrite(
             src_public / 'javascripts/seer.js',
             tgt_brunch / 'vendor/javascripts/seer.js')
