@@ -54,11 +54,11 @@ class OLAP(SimpleDoc, mongoengine.Document):
     maxLen = mongoengine.IntField()
     groupTime = mongoengine.StringField()
     valueMap = mongoengine.ListField()
-    since = mongoengine.IntField()
-    before = mongoengine.IntField()
+    skip = mongoengine.IntField()
+    limit = mongoengine.IntField()
     olapFilter = mongoengine.ListField()
     statsInfo = mongoengine.ListField()
-    notNull = mongoengine.IntField()
+    sortInfo = mongoengine.DictField()
     transient = mongoengine.BooleanField()
     confirmed = mongoengine.BooleanField()
     
@@ -88,21 +88,25 @@ class OLAP(SimpleDoc, mongoengine.Document):
         results = self.doPostProc(results)
         
         # Check for empty results and handle if necessary
-        if not len(results) and type(self.notNull) == int:
-            results = self.defaultOLAP()
+        #if not len(results) and type(self.notNull) == int:
+        #    results = self.defaultOLAP()
         
         # Convert Pandas DataFrame into dict
         return [v for v in results.transpose().to_dict().values()]
     
     def mergeParams(self, passedParams):
         # Take the passed parameters and override the built-in parameters 
-        merged = []
-        for f in self.olapFilter:
+        merged = self.olapFilter
+        
+        # Overwrite previous filters if needed
+        for p in passedParams:
             filtFound = 0
-            for p in passedParams:
-                if p['type'] == f['type'] and p['name'] == f['name']:
-                    merged.append(p)
+            for m in merged:
+                # If the a similar filter found, overwrite with the pased filter 
+                if p['type'] == m['type'] and p['name'] == m['name']:
+                    m = p
                     filtFound = 1
+            # If no similar filter found, add it
             if not filtFound: merged.append(f)
         
         return merged
@@ -158,7 +162,13 @@ class OLAP(SimpleDoc, mongoengine.Document):
         # All the heavy lifting now done by Filters
         f = Filter()
         
-        count, frames = f.getFrames(filterParams)
+        if not self.skip:
+            self.skip = 0
+            
+        if not self.limit:
+            self.limit = float("inf")
+        
+        count, frames = f.getFrames(filterParams, skip=self.skip, limit=self.limit, sortinfo=self.sortInfo)
         flat = f.flattenFrame(frames)
         
         return pd.DataFrame(flat)
