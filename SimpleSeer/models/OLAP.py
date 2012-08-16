@@ -88,8 +88,8 @@ class OLAP(SimpleDoc, mongoengine.Document):
         results = self.doPostProc(results)
         
         # Check for empty results and handle if necessary
-        if not len(results) and type(self.notNull) == int:
-            results = self.defaultOLAP()
+        #if not len(results) and type(self.notNull) == int:
+        #    results = self.defaultOLAP()
         
         # Convert Pandas DataFrame into dict
         return [v for v in results.transpose().to_dict().values()]
