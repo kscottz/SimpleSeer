@@ -17,7 +17,6 @@ module.exports = class markupImage extends SubView
   pjs: ''
   zoom: 1
   template: template
-  
 
   # Returns a blank image url if a model
   # if not defined yet. Otherwise, pull
