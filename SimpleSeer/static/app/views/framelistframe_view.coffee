@@ -38,70 +38,66 @@ module.exports = class FramelistFrameView extends View
     application.framelistView.showImageExpanded @$el, @frame, @model
     @$el.find('.featureLabel').show()
   
+  # Hide the feature data label.
   hideImage: =>
     @$el.find('.featureLabel').hide()
   
+  # Show the save button to indicate dirty
+  # changes.
   showSaved: =>
     @$el.find('.savebtn').show()
     
+  # Hides the save button to indicate clean
+  # input and db.
   hideSaved: =>
     @$el.find('.savebtn').hide()
     
+  # Sets the text of the save button to indicate
+  # that the database has been updated already.
   setSaved: =>
     @$el.find('.savebtn').button( "option" , 'label' , 'Saved' )
     @$el.find('.savebtn').button('disable')
     
+  # Sets the text of the save button to indicate
+  # that there are dirty changes that need to
+  # be saved to the db.
   setDirty: =>
     @$el.find('.savebtn').button('enable')
     @$el.find('.savebtn').button( "option" , 'label' , 'Save' )
     @$el.find('.savebtn').show()
 
-  delBlankMeta: (obj) =>
-    $(obj).find("tr").each (id, obj) ->
-      tds = $(obj).find('td')
-      if $(tds[0]).html() == '' && $(tds[1]).html() == ''  
-        $(obj).remove()
-      
-  addMetaBox: (obj) =>
-    disabled = application.settings.mongo.is_slave || false
-    html='<tr><td class="item-detail"><input type="text"'
-    if disabled
-      html+=' disabled="disabled" '
-    html+='></td><td class="item-detail-value"><input type="text"'
-    if disabled
-      html+=' disabled="disabled" '    
-    html+='></td></tr>'
-    $(obj).append(html)
-
+  # Loop through the input table and update the db
+  # with the new fields.
   updateMetaData: (self) =>  
     metadata = {}
-    
     rows = $(self).find("tr")
     rows.each (id, obj) ->
       tds = $(obj).find('td')
       input = $(tds[1]).find('input')
       span = $(tds[0]).find('span')
       metadata[$(span).html()] = input.attr('value')
-    
     @model.save {metadata: metadata,notes:$(".notes-field").attr('value')}
     @setSaved()
 
+  # Save the notes field in the database.
   updateNotes: (e) =>
     @model.save {notes:$(".notes-field").attr('value')}
     @setSaved()
 
+  # Called when the metadata input fields are
+  # moused on to. Display is set to dirty.
   switchStaticMeta: (e) =>
     self = $(e.currentTarget)
     @setDirty()
 
-    if self.find("input").length == 0
-      $(self).html "<input type=\"text\" value=\"" + self.html() + "\">"
-      self.find("input").focus()
-
+  # Called when the metadat input fields lose
+  # focus. Updates the database.
   switchInputMeta: (e) =>
     target = $(e.currentTarget).parent().parent()
     @updateMetaData(target)
     
+  # Spits out the rendering data to the templating
+  # engine. Turns metadata into a key dict.
   getRenderData: =>
     md = @frame.get('metadata')
     metadata = []
@@ -118,14 +114,19 @@ module.exports = class FramelistFrameView extends View
       width: @frame.get('width')
       height: @frame.get('height')
       notes: @frame.get('notes')
-    retVal
+    return retVal
 
+  # Initialize jQuery elements on the html and
+  # set the default state of the save buttons.
   afterRender: =>
     @$el.find(".notes-field").autogrow()
     @$el.find('.savebtn').button()
     @$el.find('.savebtn').hide()
     @setSaved()
-    
+  
+  # Renders the frame's feature data and capture
+  # time into a false table that is displayed
+  # with the other frame information.
   renderTableRow: (table) =>
     awesomeRow = []
     rd = @getRenderData()
@@ -140,5 +141,3 @@ module.exports = class FramelistFrameView extends View
     for i,o of f
       awesomeRow[o.title + o.units] = o.value
     table.addRow(awesomeRow)
-
-  
