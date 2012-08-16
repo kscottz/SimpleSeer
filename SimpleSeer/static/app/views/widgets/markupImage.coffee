@@ -23,7 +23,7 @@ module.exports = class markupImage extends SubView
   # if not defined yet. Otherwise, pull
   # in the fullsize view from the model.
   getRenderData: =>
-    return {url: if @model then data.url = "/grid/imgfile/" + @model.get("id") else "" }
+    return {url: if @model then "/grid/imgfile/" + @model.get("id") else "" }
     
   # After the DOM is created we can play
   # with the canvas.

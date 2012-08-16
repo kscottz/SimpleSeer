@@ -2,10 +2,16 @@ View = require './view'
 template = require './templates/framelistframe'
 application = require('application')
 
+# FrameListFrame view that is displayed in the Frame
+# List collection view. Shows an at-a-glance view of
+# a frame and it's feature data.
+
 module.exports = class FramelistFrameView extends View
   template: template
   className:'image-view-item'
   
+  # Insert blank value pairs for non-existant
+  # keys in the metadata.
   initialize: (frame)=>
     super()
     if !frame.model.attributes.metadata
@@ -15,6 +21,8 @@ module.exports = class FramelistFrameView extends View
         frame.model.attributes.metadata[k] = ''
     @frame = frame.model
 
+  # Events for dirty input fields and handling
+  # the display of the save buttons.
   events:
     'click .clickEdit'  : 'switchStaticMeta'
     'blur .clickEdit'  : 'switchInputMeta'
@@ -24,6 +32,8 @@ module.exports = class FramelistFrameView extends View
     'focus .ivi-right' : 'showSaved'
     'blur .ivi-right' : 'hideSaved'
 
+  # Opens up the markup-view created in the Imgae
+  # tab.
   expandImage: =>
     application.framelistView.showImageExpanded @$el, @frame, @model
     @$el.find('.featureLabel').show()
@@ -73,7 +83,6 @@ module.exports = class FramelistFrameView extends View
       span = $(tds[0]).find('span')
       metadata[$(span).html()] = input.attr('value')
     
-    #@addMetaBox(self)
     @model.save {metadata: metadata,notes:$(".notes-field").attr('value')}
     @setSaved()
 
@@ -91,12 +100,6 @@ module.exports = class FramelistFrameView extends View
 
   switchInputMeta: (e) =>
     target = $(e.currentTarget).parent().parent()
-
-    #unless target.find("input").length is 0
-    #  target.find("td").each (id, obj) ->
-    #    $(obj).html $(obj).find("input").attr("value")
-
-    #@delBlankMeta(target)
     @updateMetaData(target)
     
   getRenderData: =>
