@@ -162,7 +162,13 @@ class OLAP(SimpleDoc, mongoengine.Document):
         # All the heavy lifting now done by Filters
         f = Filter()
         
-        count, frames = f.getFrames(filterParams)
+        if not self.skip:
+            self.skip = 0
+            
+        if not self.limit:
+            self.limit = float("inf")
+        
+        count, frames = f.getFrames(filterParams, skip=self.skip, limit=self.limit, sortinfo=self.sortInfo)
         flat = f.flattenFrame(frames)
         
         return pd.DataFrame(flat)
