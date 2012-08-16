@@ -436,23 +436,17 @@ class Filter():
         featureKeys = {}
         resultKeys = {}
         
-        Inspection.register_plugins('seer.plugins.inspection')
-
         for i in Inspection.objects:
             # Features can override their method name
             # To get actual plugin name, need to go through the inspection
             # Then use plugin to find the name of its printable fields
-            try:
-                plugin = i.get_plugin(i.method)
-                if 'printFields' in dir(plugin):
-                    featureKeys[i.name] = plugin.printFields()
-                    # Always make sure the featuretype and inspection fields listed for other queries
-                    featureKeys[i.name].append('featuretype')
-                    featureKeys[i.name].append('inspection')
-                else:
-                    featureKeys[i.name] = ['featuretype', 'inspection', 'featuredata']
-            except ValueError:
-                log.info('No plugin found for %s, using default fields' % i.method)
+            plugin = i.get_plugin(i.method)
+            if 'printFields' in dir(plugin):
+                featureKeys[i.name] = plugin.printFields()
+                # Always make sure the featuretype and inspection fields listed for other queries
+                featureKeys[i.name].append('featuretype')
+                featureKeys[i.name].append('inspection')
+            else:
                 featureKeys[i.name] = ['featuretype', 'inspection', 'featuredata']
                 
         # Becuase of manual measurements, need to look at frame results to figure out if numeric or string fields in place
@@ -467,7 +461,7 @@ class Filter():
                 else:
                     resultKeys[m.name] = ['measurement_name', 'measurement_id', 'inspection_id', 'string', 'numeric']
             except ValueError:
-                log.info('No plugin found for %s, using default fields' % m.method)
+                # log.info('No plugin found for %s, using default fields' % m.method)
                 resultKeys[m.name] = ['measurement_name', 'measurement_id', 'inspection_id', 'string', 'numeric']
         
         
@@ -495,13 +489,13 @@ class Filter():
         feats = frame['features']
         newFeats = []
         for f in feats:
-            newFeats.append(f.__dict__['_data'])
+            newFeats.append(f['py/state'])
         frame['features'] = newFeats
         
         results = frame['results']
         newRes = []
         for r in results:
-            newRes.append(r.__dict__['_data'])
+            newRes.append(r['py/state'])
         frame['results'] = newRes
         
         return frame

@@ -25,7 +25,7 @@ class FrameSchema(fes.Schema):
     filter_extra_fields=True
     camera = fev.UnicodeString(not_empty=True)
     metadata = V.JSON(if_empty={}, if_missing={})
-    notes = fev.UnicodeString(not_empty=True)
+    notes = fev.UnicodeString(not_empty=True, if_empty="", if_missing="")
 	#TODO, make this feasible as a formencode schema for upload
 
 
@@ -132,7 +132,8 @@ class Frame(SimpleDoc, mongoengine.Document):
     def save(self, *args, **kwargs):
         from SimpleSeer.OLAPUtils import RealtimeOLAP
         
-
+        #TODO: sometimes we want a frame with no image data, basically at this
+        #point we're trusting that if that were the case we won't call .image
         if self._imgcache != '':
             s = StringIO()
             img = self._imgcache
@@ -152,7 +153,7 @@ class Frame(SimpleDoc, mongoengine.Document):
             #self._imgcache = ''
         
         super(Frame, self).save(*args, **kwargs)
-        
+
         #TODO, this is sloppy -- we should handle this with cascading saves
         #or some other mechanism
         for r in self.results:
@@ -161,14 +162,10 @@ class Frame(SimpleDoc, mongoengine.Document):
             result.frame_id = self.id
             result.save(*args, **kwargs)
         
-        # Make sure this is something to update
-        if self.results or self.features:    
-            ro = RealtimeOLAP()
-            ro.realtime(self)
-        #TODO: sometimes we want a frame with no image data, basically at this
-        #point we're trusting that if that were the case we won't call .image
+        # Once everything else is saved, publish result
+        # Do not place any other save actions after this line or realtime objects will miss data
         realtime.ChannelManager().publish('frame/', self)
-
+        
         
     def serialize(self):
         s = StringIO()

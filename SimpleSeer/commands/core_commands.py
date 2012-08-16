@@ -12,7 +12,6 @@ class CoreStatesCommand(Command):
         subparser.add_argument('--disable-pyro', action='store_true')
 
     def run(self):
-        from SimpleSeer.OLAPUtils import ScheduledOLAP
         from SimpleSeer.states import Core
         import Pyro4
 
@@ -25,8 +24,6 @@ class CoreStatesCommand(Command):
         if not found_statemachine:
             raise Exception("State machine " + self.options.program + " not found!")
             
-        so = ScheduledOLAP()
-        gevent.spawn_link_exception(so.runSked)
 
         core.start_socket_communication()
 
@@ -67,12 +64,32 @@ def PerfTestCommand(self):
     seer = SimpleSeer()
     seer.run()
 
+@Command.simple(use_gevent=True, remote_seer=False)
+def OlapCommand(self):
+    from SimpleSeer.OLAPUtils import ScheduledOLAP, RealtimeOLAP
+    from SimpleSeer.models.Inspection import Inspection, Measurement
+
+    Inspection.register_plugins('seer.plugins.inspection')
+    Measurement.register_plugins('seer.plugins.measurement')
+
+    so = ScheduledOLAP()
+    gevent.spawn_link_exception(so.runSked)
+    
+    ro = RealtimeOLAP()
+    ro.monitorRealtime()
+    
+    
 @Command.simple(use_gevent=True, remote_seer=True)
 def WebCommand(self):
     'Run the web server'
     from SimpleSeer.Web import WebServer, make_app
     from SimpleSeer import models as M
     from pymongo import Connection, DESCENDING, ASCENDING
+    from SimpleSeer.models.Inspection import Inspection, Measurement
+
+    # Plugins must be registered for queries
+    Inspection.register_plugins('seer.plugins.inspection')
+    Measurement.register_plugins('seer.plugins.measurement')
 
     # Ensure indexes created for filterable fields
     dbName = self.session.database
