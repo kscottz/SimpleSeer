@@ -51,8 +51,11 @@ exports.config =
       joinTo:
         'stylesheets/seer.css': (path) -> true
       order:
-        before: ['vendor/styles/bootstrap.css']
-        after: [ 'vendor/styles/bootstrap-responsive.css',
+        before: [
+          'vendor/styles/bootstrap.css'
+        ]
+        after: [
+          #'vendor/styles/bootstrap-responsive.css',
           'vendor/styles/jquery.jqplot.min.css',
           'vendor/styles/themes/base/jquery.ui.core.css',
           'vendor/styles/tablesorter-blue.css',
