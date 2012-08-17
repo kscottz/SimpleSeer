@@ -2,7 +2,8 @@ scipy
 numpy
 pil
 pygame
-ipython
+ipython==0.13
+matplotlib
 mongoengine
 #https://github.com/ingenuitas/pyfirmata/zipball/master
 decorator
