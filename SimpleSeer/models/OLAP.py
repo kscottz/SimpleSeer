@@ -95,16 +95,14 @@ class OLAP(SimpleDoc, mongoengine.Document):
         return [v for v in results.transpose().to_dict().values()]
     
     def mergeParams(self, passedParams):
-        # Take the passed parameters and override the built-in parameters 
-        merged = self.olapFilter
+        # Take all the passed parameters 
+        merged = passedParams
         
-        # Overwrite previous filters if needed
-        for p in passedParams:
+        # Only use original if they to not intersect with passed
+        for f in self.olapFilter:
             filtFound = 0
             for m in merged:
-                # If the a similar filter found, overwrite with the pased filter 
-                if p['type'] == m['type'] and p['name'] == m['name']:
-                    m = p
+                if f['type'] == m['type'] and f['name'] == m['name']:
                     filtFound = 1
             # If no similar filter found, add it
             if not filtFound: merged.append(f)
