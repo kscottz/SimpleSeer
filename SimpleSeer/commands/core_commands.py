@@ -161,3 +161,67 @@ def NotebookCommand(self):
             '--ext', 'SimpleSeer.ipython_extension'])
     app.start()
 
+
+class ExportImagesCommand(Command):
+
+  def __init__(self, subparser):
+    subparser.add_argument("number", help="This is the number of lastframes you want, use 'all' if you want all the images ever", default='all', nargs='?')
+  
+  def run(self):
+      "Dump the images stored in the database to a local directory in standard image format"
+      from SimpleSeer.SimpleSeer import SimpleSeer
+      from SimpleSeer import models as M
+      
+      
+      number_of_images = self.options.number
+      
+      if number_of_images != 'all':
+        number_of_images = int(number_of_images)
+        frames = M.Frame.objects().order_by("-capturetime").limit(number_of_images)
+      else:
+        frames = M.Frame.objects()
+
+      num_of_frames = len(frames)
+      counter = 1
+
+      for frame in frames:
+        file_name = '/tmp/' + str(frame.id) + '.png'
+        print 'Saving file (',counter,'of',len(frames),'):',file_name
+        frame.image.save(file_name)
+        counter += 1
+
+class ExportImagesQueryCommand(Command):
+
+  def __init__(self, subparser):
+    from argparse import RawTextHelpFormatter, RawDescriptionHelpFormatter
+    subparser.formatter_class=RawDescriptionHelpFormatter
+    help_text = '''
+    This will export images with the mongo query specified 'i.e. Frame.objects(query_here)'
+    To use, you would normally run the query as:
+    Frame.objects(id='502bfa6856a8bf1e755c702d', width__gte = 50)
+
+    You need to structure the query as a dictionary like:
+    "{'id':'502bfa6856a8bf1e755c702d', 'width__gte': '50'}"
+
+    So you would run the command as:
+    simpleseer export-images-query "{'id':'502bfa6856a8bf1e755c702d', 'width__gte': '50'}"
+    '''
+    subparser.add_argument("query", help=help_text)
+
+  def run(self):
+      "Dump the images stored in the database to a local directory in standard image format with a specific query"
+      from SimpleSeer.SimpleSeer import SimpleSeer
+      from SimpleSeer import models as M
+      import ast
+      
+      print "Saving images to local directory"
+      query = self.options.query
+      query = ast.literal_eval(query)
+      frames = M.Frame.objects(**query).order_by("-capturetime")
+
+      for frame in frames:
+        file_name = '/tmp/' + str(frame.id) + '.png'
+        print 'Saving:',file_name
+        frame.image.save(file_name)
+
+        
