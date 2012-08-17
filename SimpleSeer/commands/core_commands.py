@@ -134,30 +134,16 @@ def ScrubCommand(self):
 @Command.simple(use_gevent=False, remote_seer=True)
 def ShellCommand(self):
     'Run the ipython shell'
-    from IPython.config.loader import Config
-    from IPython.frontend.terminal.embed import InteractiveShellEmbed
-    from SimpleSeer.service import SeerProxy2
-    from SimpleSeer import models as M
+    import subprocess
+    
+    subprocess.call(["ipython", 
+            '--ext', 'SimpleSeer.ipython', '--pylab'], stderr=subprocess.STDOUT)
 
-    banner = '''\nRunning the SimpleSeer interactive shell.\n'''
-    exit_msg = '\n... [Exiting the SimpleSeer interactive shell] ...\n'
-    shell= InteractiveShellEmbed(
-        banner1=banner, exit_msg=exit_msg, user_ns={})
-    shell.extension_manager.load_extension('SimpleSeer.ipython_extension')
-    shell()
-
-@Command.simple(use_gevent=False, remote_seer=True)
+@Command.simple(use_gevent=True, remote_seer=False)
 def NotebookCommand(self):
     'Run the ipython notebook server'
-    from IPython.frontend.html.notebook import notebookapp
-    from IPython.frontend.html.notebook import kernelmanager
-    from SimpleSeer import models as M
-
-    kernelmanager.MappingKernelManager.first_beat=30.0
-    app = notebookapp.NotebookApp.instance()
-    app.initialize([
-            '--no-browser',
+    import subprocess
+    subprocess.call(["ipython", "notebook",
             '--port', '5050',
-            '--ext', 'SimpleSeer.ipython_extension'])
-    app.start()
+            '--ext', 'SimpleSeer.ipython', '--pylab', 'inline'], stderr=subprocess.STDOUT)
 
