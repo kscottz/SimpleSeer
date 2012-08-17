@@ -62,7 +62,7 @@ class Filter():
             return 0, []
         
         if timeEpoch:
-            map(lambda x: timegm(x['capturetime'].timetuple()) * 1000, results)
+            map(lambda x: x.__setitem__('capturetime', timegm(x['capturetime'].timetuple()) * 1000), results)
             
         return len(cmd['result']), results    
         
