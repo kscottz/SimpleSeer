@@ -10,7 +10,9 @@ log = logging.getLogger(__name__)
 
 class Filter():
     
-    def getFrames(self, allFilters, skip=0, limit=float("inf"), sortinfo = {}):
+    names = {}
+    
+    def getFrames(self, allFilters, skip=0, limit=float("inf"), sortinfo = {}, timeEpoch = True):
         
         pipeline = []
         frames = []
@@ -59,8 +61,8 @@ class Filter():
         else:
             return 0, []
         
-        for r in results:
-            r['capturetime'] = timegm(r['capturetime'].timetuple()) * 1000
+        if timeEpoch:
+            map(lambda x: x.__setitem__('capturetime', timegm(x['capturetime'].timetuple()) * 1000), results)
             
         return len(cmd['result']), results    
         
@@ -456,7 +458,12 @@ class Filter():
             return self.getField(field.get(keyParts.pop(0), {}), keyParts) 
     
     def inspectionIdToName(self, inspId):
-        return Inspection.objects(id=inspId)[0].name
+        if inspId in self.names:
+            return self.names[inspId]
+        else:
+            name = Inspection.objects(id=inspId)[0].name 
+            self.names[inspId] = name
+            return name
     
     def flattenFrame(self, frames):
         
