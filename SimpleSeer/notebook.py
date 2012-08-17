@@ -1,11 +1,13 @@
 
+
 def load_ipython_extension(ipython):
+    
     from .Session import Session
+    from SimpleCV import Display
     from .realtime import ChannelManager
     from . import models as M
     import zmq
     
-
     s = Session("simpleseer.cfg")
     ipython.push(
         dict(
@@ -16,12 +18,12 @@ def load_ipython_extension(ipython):
             Inspection = M.Inspection,
             Measurement = M.Measurement,
             M=M,
+            display=Display(displaytype="notebook"), 
             cm=ChannelManager(zmq.Context.instance())),
         interactive=True)
-    ipython.prompt_manager.in_template="SimpleSeer:\\#> "
-    ipython.prompt_manager.out_template="SimpleSeer:\\#: "
     print 'SimpleSeer ipython extension loaded ok'
 
 def unload_ipython_extension(ipython):
     # If you want your extension to be unloadable, put that logic here.
     pass
+

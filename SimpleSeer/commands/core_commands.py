@@ -145,7 +145,7 @@ def NotebookCommand(self):
     import subprocess
     subprocess.call(["ipython", "notebook",
             '--port', '5050',
-            '--ext', 'SimpleSeer.ipython', '--pylab', 'inline'], stderr=subprocess.STDOUT)
+            '--ext', 'SimpleSeer.notebook', '--pylab', 'inline'], stderr=subprocess.STDOUT)
 
 
 class ExportImagesCommand(Command):
