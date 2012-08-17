@@ -39,6 +39,7 @@ class OLAPFactory:
         existing = OLAP.objects(olapFilter = filters, skip=originalOLAP.skip, limit=originalOLAP.limit)
         if len(existing) > 0:
             o = existing[0]
+            o.confirmed = True
             c = Chart.objects(olap = o.name)[0]
             return c.name, o 
             
