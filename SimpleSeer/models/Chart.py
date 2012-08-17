@@ -8,6 +8,7 @@ from formencode import schema as fes
 from SimpleSeer import validators as V
 
 from calendar import timegm
+from datetime import datetime
 
 from .OLAP import OLAP
 
@@ -91,13 +92,9 @@ class Chart(SimpleDoc, mongoengine.Document):
         data = []
         
         for r in results:
-            # TODO Make this more generic than just capturetime
-            # Capturetimes should now come from filter in epoch seconds already
-            #if 'capturetime' in r:
-            #    if r['capturetime'] is not None:
-            #        r['capturetime'] = timegm(r['capturetime'].timetuple()) * 1000
-            #    else:
-            #        r['capturetime'] = 0
+            if 'capturetime' in r:
+                if type(r['capturetime']) == datetime:
+                    r['capturetime'] = timegm(r['capturetime'].timetuple()) * 1000
             thisData = [r.get(d, 0) for d in self.dataMap]
             thisMeta = [r.get(m, 0) for m in self.metaMap]
             

@@ -54,8 +54,8 @@ class OLAP(SimpleDoc, mongoengine.Document):
     maxLen = mongoengine.IntField()
     groupTime = mongoengine.StringField()
     valueMap = mongoengine.ListField()
-    skip = mongoengine.IntField()
-    limit = mongoengine.IntField()
+    skip = mongoengine.FloatField()
+    limit = mongoengine.FloatField()
     olapFilter = mongoengine.ListField()
     statsInfo = mongoengine.ListField()
     sortInfo = mongoengine.DictField()
@@ -77,12 +77,12 @@ class OLAP(SimpleDoc, mongoengine.Document):
         # Get the raw data
         results = self.doQuery(filterParams)
         
-        # Run any descriptive statistics or aggregation
-        results = self.doStats(results)
-        
         # Handle auto-aggregation
         if len(results) > self.maxLen:
-            results = self.autoAggregate(results)
+            self.autoAggregate(results, params = filterParams)
+        
+        # Run any descriptive statistics or aggregation
+        results = self.doStats(results)
         
         # If necessary, remap the values in post processing
         results = self.doPostProc(results)
@@ -140,7 +140,7 @@ class OLAP(SimpleDoc, mongoengine.Document):
                 # Else, take the first element from the series
                 keyFuncs = {}
                 for key in results.keys():
-                    if type(results[key][0]) == np.float64:
+                    if type(self.firstNotNan(results[key])) == np.float64:
                         keyFuncs[key] = np.__getattribute__(fn)
                     else:
                         keyFuncs[key] = self.firstNotNan #lambda x: [type(y) for y in x]
@@ -168,14 +168,14 @@ class OLAP(SimpleDoc, mongoengine.Document):
         if not self.limit:
             self.limit = float("inf")
         
-        count, frames = f.getFrames(filterParams, skip=self.skip, limit=self.limit, sortinfo=self.sortInfo)
+        count, frames = f.getFrames(filterParams, skip=self.skip, limit=self.limit, sortinfo=self.sortInfo, timeEpoch = False)
         flat = f.flattenFrame(frames)
         
         return pd.DataFrame(flat)
 
-    def autoAggregate(self, resultSet, autoUpdate = True):
-        oldest = resultSet[-1]
-        newest = resultSet[0]
+    def autoAggregate(self, resultSet, params = [], autoUpdate = True):
+        oldest = resultSet.irow(-1)
+        newest = resultSet.irow(0)
         
         elapsedTime = (newest['capturetime'] - oldest['capturetime']).total_seconds()
         timeRange = elapsedTime / self.maxLen
@@ -191,9 +191,8 @@ class OLAP(SimpleDoc, mongoengine.Document):
             
         if autoUpdate:
             self.save()
-            return self.doQuery()
-        else:
-            return []
+            
+        return
 
     def defaultOLAP(self):
         from bson import ObjectId
