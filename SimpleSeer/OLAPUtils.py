@@ -33,9 +33,17 @@ class OLAPFactory:
         # This is needed for OLAPs that publish realtime but are the result of filters
         
         from .models.Chart import Chart
-        
-        # First, create the core OLAP
         originalOLAP = OLAP.objects(name = originalChart.olap)[0]
+            
+        # Check for previous similar OLAPs
+        existing = OLAP.objects(olapFilter = filters, skip=originalOLAP.skip, limit=originalOLAP.limit)
+        if len(existing) > 0:
+            o = existing[0]
+            o.confirmed = True
+            c = Chart.objects(olap = o.name)[0]
+            return c.name, o 
+            
+        # First, create the core OLAP
         o = self.fromFilter(filters, originalOLAP)
         o.transient = True
         o.confirmed = True
@@ -49,6 +57,8 @@ class OLAPFactory:
         c.dataMap = originalChart.dataMap
         c.olap = o.name
         c.save()
+        
+        return c.name, o
     
     def fromFilter(self, filters, oldOLAP = None):
         
@@ -128,12 +138,12 @@ class OLAPFactory:
             o.valueMap = []
     
         # No since constratint
-        if not o.since:
-            o.since = None
+        if not o.skip:
+            o.skip = 0
         
         # No before constraint
-        if not o.before:
-            o.before = None
+        if not o.limit:
+            o.limit = float("inf")
             
         # Finally, run once to see if need to aggregate
         if not o.statsInfo:

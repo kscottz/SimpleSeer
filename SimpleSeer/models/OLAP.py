@@ -54,11 +54,11 @@ class OLAP(SimpleDoc, mongoengine.Document):
     maxLen = mongoengine.IntField()
     groupTime = mongoengine.StringField()
     valueMap = mongoengine.ListField()
-    since = mongoengine.IntField()
-    before = mongoengine.IntField()
+    skip = mongoengine.FloatField()
+    limit = mongoengine.FloatField()
     olapFilter = mongoengine.ListField()
     statsInfo = mongoengine.ListField()
-    notNull = mongoengine.IntField()
+    sortInfo = mongoengine.DictField()
     transient = mongoengine.BooleanField()
     confirmed = mongoengine.BooleanField()
     
@@ -77,32 +77,34 @@ class OLAP(SimpleDoc, mongoengine.Document):
         # Get the raw data
         results = self.doQuery(filterParams)
         
-        # Run any descriptive statistics or aggregation
-        results = self.doStats(results)
-        
         # Handle auto-aggregation
         if len(results) > self.maxLen:
-            results = self.autoAggregate(results)
+            self.autoAggregate(results, params = filterParams)
+        
+        # Run any descriptive statistics or aggregation
+        results = self.doStats(results)
         
         # If necessary, remap the values in post processing
         results = self.doPostProc(results)
         
         # Check for empty results and handle if necessary
-        if not len(results) and type(self.notNull) == int:
-            results = self.defaultOLAP()
+        #if not len(results) and type(self.notNull) == int:
+        #    results = self.defaultOLAP()
         
         # Convert Pandas DataFrame into dict
         return [v for v in results.transpose().to_dict().values()]
     
     def mergeParams(self, passedParams):
-        # Take the passed parameters and override the built-in parameters 
-        merged = []
+        # Take all the passed parameters 
+        merged = passedParams
+        
+        # Only use original if they to not intersect with passed
         for f in self.olapFilter:
             filtFound = 0
-            for p in passedParams:
-                if p['type'] == f['type'] and p['name'] == f['name']:
-                    merged.append(p)
+            for m in merged:
+                if f['type'] == m['type'] and f['name'] == m['name']:
                     filtFound = 1
+            # If no similar filter found, add it
             if not filtFound: merged.append(f)
         
         return merged
@@ -136,7 +138,7 @@ class OLAP(SimpleDoc, mongoengine.Document):
                 # Else, take the first element from the series
                 keyFuncs = {}
                 for key in results.keys():
-                    if type(results[key][0]) == np.float64:
+                    if type(self.firstNotNan(results[key])) == np.float64:
                         keyFuncs[key] = np.__getattribute__(fn)
                     else:
                         keyFuncs[key] = self.firstNotNan #lambda x: [type(y) for y in x]
@@ -158,14 +160,20 @@ class OLAP(SimpleDoc, mongoengine.Document):
         # All the heavy lifting now done by Filters
         f = Filter()
         
-        count, frames = f.getFrames(filterParams)
+        if not self.skip:
+            self.skip = 0
+            
+        if not self.limit:
+            self.limit = float("inf")
+        
+        count, frames = f.getFrames(filterParams, skip=self.skip, limit=self.limit, sortinfo=self.sortInfo, timeEpoch = False)
         flat = f.flattenFrame(frames)
         
         return pd.DataFrame(flat)
 
-    def autoAggregate(self, resultSet, autoUpdate = True):
-        oldest = resultSet[-1]
-        newest = resultSet[0]
+    def autoAggregate(self, resultSet, params = [], autoUpdate = True):
+        oldest = resultSet.irow(-1)
+        newest = resultSet.irow(0)
         
         elapsedTime = (newest['capturetime'] - oldest['capturetime']).total_seconds()
         timeRange = elapsedTime / self.maxLen
@@ -181,9 +189,8 @@ class OLAP(SimpleDoc, mongoengine.Document):
             
         if autoUpdate:
             self.save()
-            return self.doQuery()
-        else:
-            return []
+            
+        return
 
     def defaultOLAP(self):
         from bson import ObjectId

@@ -10,7 +10,9 @@ log = logging.getLogger(__name__)
 
 class Filter():
     
-    def getFrames(self, allFilters, skip=0, limit=float("inf"), sortinfo = {}, statsInfo = {}, groupTime = '', valueMap = {}):
+    names = {}
+    
+    def getFrames(self, allFilters, skip=0, limit=float("inf"), sortinfo = {}, timeEpoch = True):
         
         pipeline = []
         frames = []
@@ -18,7 +20,7 @@ class Filter():
         features = []
         
         # Need to initially construct/modify a few fields for future filters
-        pipeline += self.initialFields(groupTime, valueMap)
+        pipeline += self.initialFields()
         
         # Filter the data based on the filter parameters
         # Frame features are easy to filter, but measurements and features are embedded in the frame
@@ -59,12 +61,12 @@ class Filter():
         else:
             return 0, []
         
-        for r in results:
-            r['capturetime'] = timegm(r['capturetime'].timetuple()) * 1000
+        if timeEpoch:
+            map(lambda x: x.__setitem__('capturetime', timegm(x['capturetime'].timetuple()) * 1000), results)
             
         return len(cmd['result']), results    
         
-    def initialFields(self, groupTime, valueMap):
+    def initialFields(self):
         # This is a pre-filter of the relevant fields
         # It constructs a set of fields helpful when grouping by time
         # IT also constructs a set of custom renamed fields for use by other filters
@@ -79,24 +81,6 @@ class Filter():
         fields['features'] = 1
         fields['results'] = 1
         
-        # Construct a custom time field if need to group by time        
-        if groupTime:
-            if groupTime == 'minute':
-                fields['t'] = { '$isoDate': { 'year': { '$year': '$capturetime' }, 
-                                    'month': { '$month': '$capturetime' }, 
-                                    'dayOfMonth': { '$dayOfMonth': '$capturetime' }, 
-                                    'hour': { '$hour': '$capturetime' },
-                                    'minute': { '$minute': '$capturetime'}}}
-            elif groupTime == 'hour':
-                fields['t'] = { '$isoDate': { 'year': { '$year': '$capturetime' }, 
-                                    'month': { '$month': '$capturetime' }, 
-                                    'dayOfMonth': { '$dayOfMonth': '$capturetime' }, 
-                                    'hour': { '$hour': '$capturetime' }}}
-            elif groupTime == 'day':
-                fields['t'] = { '$isoDate': { 'year': { '$year': '$capturetime' }, 
-                                    'month': { '$month': '$capturetime' }, 
-                                    'dayOfMonth': { '$dayOfMonth': '$capturetime' }}}
- 
         return [{'$project': fields}]
     
     
@@ -110,41 +94,6 @@ class Filter():
         else:
             return defaultVal
 
-    def basicStats(self, statsInfo):
-        stats = {}
-        
-        stats['_id'] = '$t'
-        
-        for s in self.statsInfo:
-            key, val = s.items()[0]
-            # Needs special handling for count
-            if type(val) == int:
-                stats['count'] = {'$sum': 1}
-            else:
-                stats[str(val)] = {'$' + str(key): '$' + str(val)}
-
-        
-        # TODO: Only groups on capturetime
-        parts = []
-        
-        parts.append({'$sort': 'capturetime'})
-        parts.append({'$group': stats})
-        
-        # Stats groups on _id field, which is inconsistent with non-grouped format
-        # Use project to rename the _id field back to capturetime
-        statsProject = {}
-        
-        for key, val in stats.iteritems():
-            if key == '_id':
-                statsProject['capturetime'] = '$_id'
-                statsProject['_id'] = 0
-            else:
-                statsProject[key] = 1
-        
-        parts.append({'$project': statsProject})
-        
-        return parts
-    
     def filterFrames(self, frameQuery):
         # Construct the filter based on fields in the Frame object
         # Note that all timestamps are passed in as epoch milliseconds, but
@@ -509,7 +458,12 @@ class Filter():
             return self.getField(field.get(keyParts.pop(0), {}), keyParts) 
     
     def inspectionIdToName(self, inspId):
-        return Inspection.objects(id=inspId)[0].name
+        if inspId in self.names:
+            return self.names[inspId]
+        else:
+            name = Inspection.objects(id=inspId)[0].name 
+            self.names[inspId] = name
+            return name
     
     def flattenFrame(self, frames):
         

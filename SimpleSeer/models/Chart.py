@@ -8,6 +8,7 @@ from formencode import schema as fes
 from SimpleSeer import validators as V
 
 from calendar import timegm
+from datetime import datetime
 
 from .OLAP import OLAP
 
@@ -91,13 +92,9 @@ class Chart(SimpleDoc, mongoengine.Document):
         data = []
         
         for r in results:
-            # TODO Make this more generic than just capturetime
-            # Capturetimes should now come from filter in epoch seconds already
-            #if 'capturetime' in r:
-            #    if r['capturetime'] is not None:
-            #        r['capturetime'] = timegm(r['capturetime'].timetuple()) * 1000
-            #    else:
-            #        r['capturetime'] = 0
+            if 'capturetime' in r:
+                if type(r['capturetime']) == datetime:
+                    r['capturetime'] = timegm(r['capturetime'].timetuple()) * 1000
             thisData = [r.get(d, 0) for d in self.dataMap]
             thisMeta = [r.get(m, 0) for m in self.metaMap]
             
@@ -168,16 +165,33 @@ class Chart(SimpleDoc, mongoengine.Document):
 
         return meta
 
-    def chartData(self, filter_params = []):
+    def chartData(self, allParams = []):
+        from SimpleSeer.OLAPUtils import OLAPFactory
+        
         # Get the OLAP and its data
-        o = OLAP.objects(name=self.olap)
-        if len(o) == 1:
-            o = o[0]
-            data = o.execute(filter_params)
-            # TODO: Need to work with jim to do handoff to temp olap for realtime
+        if self.realtime and 'query' in allParams:
+            of = OLAPFactory()
+            cname, o = of.createTransient(allParams['query'], self)
         else:
-            log.warn("Found %d OLAPS in query for %s" % (len(o), o))
-            data = []
+            o = OLAP.objects(name=self.olap)
+            cname = self.name
+            
+        if 'limit' in allParams:
+            o.limit = allParams['limit']
+        if 'skip' in allParams:
+            o.skip = allParams['skip']
+
+        if 'sortinfo' in allParams:
+            o.sortInfo = allParams['sortinfo']
+        else:
+            o.sortInfo = {}
         
-        return self.mapData(data)
-        
+        if 'query' in allParams:    
+            query = allParams['query']
+        else:
+            query = []
+            
+        data = self.mapData(o.execute(query))
+        res = dict(chart = str(cname), data = data)
+
+        return res
